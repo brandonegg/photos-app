@@ -9,10 +9,11 @@ struct LibraryScreen: View {
     let model: AppModel
     let session: LibrarySession
     @Bindable var ui: LibraryUIState
-    let bottomInset: CGFloat
     @AppStorage("library.columns") private var columns = 5
     @State private var filtered = FilteredTimeline()
     @State private var headerBottom: CGFloat = 120
+    /// The bottom safe area: the tab bar (and its accessory), or just the home indicator.
+    @State private var safeBottom: CGFloat = 0
     @State private var timeGroups = TimeGroupCache()
 
     var body: some View {
@@ -36,9 +37,15 @@ struct LibraryScreen: View {
                 Spacer()
                 StatusBanner(model: model, session: session)
                     .padding(.horizontal)
-                    .padding(.bottom, bottomInset + 8)
+                    .padding(.bottom, 8)
             }
         }
+        .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.bottom } action: { safeBottom = $0 }
+    }
+
+    /// Select mode's footer replaces the tab bar; the grid clears it as before.
+    private var bottomPadding: CGFloat {
+        (ui.isSelecting ? max(safeBottom, 96) : safeBottom) + 12
     }
 
     @ViewBuilder
@@ -48,7 +55,7 @@ struct LibraryScreen: View {
             ZStack {
                 PhotoGridView(
                     snapshot: snapshot, session: session, columns: $columns, ui: ui,
-                    insets: UIEdgeInsets(top: headerBottom + 6, left: 0, bottom: bottomInset + 12, right: 0)
+                    insets: UIEdgeInsets(top: headerBottom + 6, left: 0, bottom: bottomPadding, right: 0)
                 )
                 .ignoresSafeArea()
                 .opacity(snapshot.items.isEmpty ? 0 : 1)
@@ -68,7 +75,7 @@ struct LibraryScreen: View {
                 pipeline: session.pipeline,
                 ui: ui,
                 topInset: headerBottom + 6,
-                bottomInset: bottomInset + 12
+                bottomInset: bottomPadding
             )
             .ignoresSafeArea()
             .background(Color(.systemBackground))

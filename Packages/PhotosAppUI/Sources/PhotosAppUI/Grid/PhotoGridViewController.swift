@@ -25,7 +25,7 @@ final class PhotoGridViewController: UIViewController {
     /// user is touching or moving the grid, whether it's at the newest photos, and
     /// whether the user scrolled (which morphs the bottom bar).
     var onScrollInfo: ((_ range: ClosedRange<Date>?, _ interacting: Bool, _ atBottom: Bool, _ userScrolled: Bool) -> Void)?
-    /// Space under the overlaid header and above the floating bar.
+    /// Space under the overlaid header and above the tab bar (or select footer).
     var contentInsets = UIEdgeInsets.zero {
         didSet { if contentInsets != oldValue { applyInsets() } }
     }
@@ -166,6 +166,26 @@ final class PhotoGridViewController: UIViewController {
         collectionView.addGestureRecognizer(selectPan)
         collectionView.panGestureRecognizer.require(toFail: selectPan)
         applyInsets()
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        registerWithTabBar()
+    }
+
+    /// iOS 26's tab bar shrinks while the tab's main scroll view scrolls (and fades its
+    /// edge over it). SwiftUI only finds its own scroll views, so the grid registers itself
+    /// with the screen the tab bar watches: the tab's root, or the top of its navigation stack.
+    private func registerWithTabBar() {
+        guard #available(iOS 26.0, *) else { return }
+        var controller = parent
+        while let current = controller {
+            if current.parent is UITabBarController || current.parent is UINavigationController {
+                current.setContentScrollView(collectionView, for: .bottom)
+                return
+            }
+            controller = current.parent
+        }
     }
 
     private var scrubberTop: NSLayoutConstraint?

@@ -72,7 +72,6 @@ struct PeopleRow: View {
 struct PeopleScreen: View {
     let session: LibrarySession
     let initial: [CloudPerson]?
-    let bottomInset: CGFloat
     @State private var people: [CloudPerson]?
     @State private var error: String?
 
@@ -94,7 +93,7 @@ struct PeopleScreen: View {
                     }
                 }
                 .padding(.horizontal, 20)
-                .padding(.bottom, bottomInset + 20)
+                .padding(.bottom, 20)
             } else if people == nil, error == nil {
                 ProgressView().padding(.top, 80)
             } else {
@@ -116,14 +115,13 @@ struct PeopleScreen: View {
 struct PersonScreen: View {
     @State var person: CloudPerson
     let session: LibrarySession
-    let bottomInset: CGFloat
     @State private var items: [TimelineItem]?
     @State private var error: String?
     @State private var naming = false
     @State private var draftName = ""
 
     var body: some View {
-        CollectionGridScreen(title: person.displayName, items: items ?? [], session: session, bottomInset: bottomInset,
+        CollectionGridScreen(title: person.displayName, items: items ?? [], session: session,
                              isLoading: items == nil && error == nil, emptyMessage: error)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {

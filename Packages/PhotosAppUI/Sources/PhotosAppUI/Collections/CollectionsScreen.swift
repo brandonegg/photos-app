@@ -24,7 +24,6 @@ struct CollectionsScreen: View {
     let model: AppModel
     let session: LibrarySession
     @Bindable var ui: LibraryUIState
-    let bottomInset: CGFloat
     @State private var collections = CollectionsModel()
     @State private var path = NavigationPath()
     @State private var showsAccount = false
@@ -49,14 +48,14 @@ struct CollectionsScreen: View {
                         .padding(.top, -14)
                 }
                 .padding(.top, 14)
-                .padding(.bottom, bottomInset + 20)
+                .padding(.bottom, 20)
             }
             .scrollIndicators(.automatic)
             .refreshable { await collections.load(from: session, force: true) }
             .safeAreaInset(edge: .top, spacing: 0) { header }
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: CollectionRoute.self) { route in
-                CollectionDestinationView(route: route, session: session, collections: collections, myUserID: myUserID, bottomInset: bottomInset, shellUI: ui)
+                CollectionDestinationView(route: route, session: session, collections: collections, myUserID: myUserID, shellUI: ui)
             }
         }
         // Also once the server is reachable: at launch the first load ran before the connection

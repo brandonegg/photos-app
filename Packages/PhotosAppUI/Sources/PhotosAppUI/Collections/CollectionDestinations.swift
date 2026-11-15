@@ -10,37 +10,36 @@ struct CollectionDestinationView: View {
     let session: LibrarySession
     let collections: CollectionsModel
     let myUserID: String
-    let bottomInset: CGFloat
-    /// The app's bar state (Recently Deleted hides the floating bar while selecting).
+    /// The app's shared state (toasts after Recover, Remove and the like).
     let shellUI: LibraryUIState
 
     var body: some View {
         switch route {
         case .smart(.hidden):
-            HiddenAlbumScreen(session: session, shellUI: shellUI, bottomInset: bottomInset)
+            HiddenAlbumScreen(session: session, shellUI: shellUI)
         case .smart(.recentlyDeleted):
-            RecentlyDeletedScreen(session: session, shellUI: shellUI, bottomInset: bottomInset)
+            RecentlyDeletedScreen(session: session, shellUI: shellUI)
         case .smart(.archive):
-            ScopedGridScreen(title: SmartCollection.archive.title, scope: .visibility(.archive), session: session, bottomInset: bottomInset)
+            ScopedGridScreen(title: SmartCollection.archive.title, scope: .visibility(.archive), session: session)
         case .smart(.map):
             LibraryMapScreen(session: session)
         case .smart(let smart):
-            CollectionGridScreen(title: smart.title, items: items(for: smart), session: session, bottomInset: bottomInset)
+            CollectionGridScreen(title: smart.title, items: items(for: smart), session: session)
         case .album(let album):
-            AlbumScreen(album: album, session: session, shellUI: shellUI, bottomInset: bottomInset)
+            AlbumScreen(album: album, session: session, shellUI: shellUI)
         case .memory(let memory):
-            CollectionGridScreen(title: memory.title, subtitle: memory.subtitle, items: memory.assets.map(TimelineItem.init).reversed(), session: session, bottomInset: bottomInset)
+            CollectionGridScreen(title: memory.title, subtitle: memory.subtitle, items: memory.assets.map(TimelineItem.init).reversed(), session: session)
         case .allAlbums(let shared):
-            AllAlbumsScreen(title: shared ? String(localized: "Shared Albums") : String(localized: "Albums"), albums: (shared ? collections.sharedAlbums : collections.albums) ?? [], session: session, bottomInset: bottomInset)
+            AllAlbumsScreen(title: shared ? String(localized: "Shared Albums") : String(localized: "Albums"), albums: (shared ? collections.sharedAlbums : collections.albums) ?? [], session: session)
         case .items(let title, let assetIDs):
             let ids = Set(assetIDs)
-            CollectionGridScreen(title: title, items: session.timeline.items.filter { ids.contains($0.id) }, session: session, bottomInset: bottomInset)
+            CollectionGridScreen(title: title, items: session.timeline.items.filter { ids.contains($0.id) }, session: session)
         case .allMemories:
-            AllMemoriesScreen(memories: collections.memories ?? [], session: session, bottomInset: bottomInset)
+            AllMemoriesScreen(memories: collections.memories ?? [], session: session)
         case .people:
-            PeopleScreen(session: session, initial: collections.people, bottomInset: bottomInset)
+            PeopleScreen(session: session, initial: collections.people)
         case .person(let person):
-            PersonScreen(person: person, session: session, bottomInset: bottomInset)
+            PersonScreen(person: person, session: session)
         }
     }
 
@@ -64,7 +63,9 @@ struct CollectionGridScreen: View {
     var subtitle: String?
     let items: [TimelineItem]
     let session: LibrarySession
-    let bottomInset: CGFloat
+    /// The grid's content clears at least this much at the bottom (a select footer); it
+    /// always clears the safe area, which includes the tab bar.
+    var bottomInset: CGFloat = 0
     var isLoading = false
     var emptyMessage: String?
     /// Select mode (Recently Deleted); nil for plain collections.
@@ -80,6 +81,7 @@ struct CollectionGridScreen: View {
     @AppStorage("trash.columns") private var trashColumns = 5
     @AppStorage("hidden.columns") private var hiddenColumns = 5
     @State private var headerBottom: CGFloat = 160
+    @State private var safeBottom: CGFloat = 0
     @State private var version = 0
     @State private var showsTip = false
 
@@ -110,7 +112,7 @@ struct CollectionGridScreen: View {
                 PhotoGridView(
                     snapshot: TimelineSnapshot(items: items, version: version, isLoaded: true),
                     session: session, mode: mode, album: album, columns: columns, ui: ui,
-                    insets: UIEdgeInsets(top: headerBottom + (isPlain ? 2 : 6), left: 0, bottom: bottomInset + 12, right: 0),
+                    insets: UIEdgeInsets(top: headerBottom + (isPlain ? 2 : 6), left: 0, bottom: max(bottomInset, safeBottom) + 12, right: 0),
                     isPrimary: false, takesCommands: ui != nil, caption: caption
                 )
                 .ignoresSafeArea()
@@ -140,6 +142,7 @@ struct CollectionGridScreen: View {
             .padding(.bottom, 14)
             .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxY } action: { headerBottom = $0 }
         }
+        .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.bottom } action: { safeBottom = $0 }
         .toolbarBackground(.hidden, for: .navigationBar)
         .navigationBarTitleDisplayMode(.inline)
         .onChange(of: items) { version += 1 }
@@ -197,11 +200,10 @@ private struct ScopedGridScreen: View {
     let title: String
     let scope: TimelineScope
     let session: LibrarySession
-    let bottomInset: CGFloat
     @State private var items: [TimelineItem]?
 
     var body: some View {
-        CollectionGridScreen(title: title, items: items ?? [], session: session, bottomInset: bottomInset, isLoading: items == nil)
+        CollectionGridScreen(title: title, items: items ?? [], session: session, isLoading: items == nil)
             .task {
                 do {
                     for try await value in session.observe(scope) { items = value }
@@ -216,7 +218,6 @@ private struct ScopedGridScreen: View {
 private struct RecentlyDeletedScreen: View {
     let session: LibrarySession
     let shellUI: LibraryUIState
-    let bottomInset: CGFloat
     @State private var unlocked = false
     /// Hidden items deleted show here too when the Hidden album could be unlocked with the same Face ID.
     @State private var includesHidden = false
@@ -237,7 +238,7 @@ private struct RecentlyDeletedScreen: View {
             if unlocked {
                 CollectionGridScreen(
                     title: SmartCollection.recentlyDeleted.title, items: items ?? [], session: session,
-                    bottomInset: ui.isSelecting ? 96 : bottomInset,
+                    bottomInset: ui.isSelecting ? 96 : 0,
                     isLoading: items == nil,
                     emptyMessage: String(localized: "Deleted items stay here for \(session.trashRetentionDays) days, then they're removed from Cloud for good."),
                     ui: ui, caption: daysLeft, mode: .trash,
@@ -247,6 +248,7 @@ private struct RecentlyDeletedScreen: View {
                 .overlay(alignment: .bottom) {
                     if ui.isSelecting {
                         footer
+                            .ignoresSafeArea(.container, edges: .bottom)
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
                 }
@@ -265,9 +267,8 @@ private struct RecentlyDeletedScreen: View {
             }
         }
         .task { if !unlocked { await unlock() } }
-        .onChange(of: ui.isSelecting) { _, selecting in shellUI.hidesFloatingBar = selecting }
+        .toolbar(ui.isSelecting ? .hidden : .automatic, for: .tabBar)
         .onDisappear {
-            shellUI.hidesFloatingBar = false
             ui.endSelecting()
             if includesHidden { Task { await session.hiddenVault.lock() } }
         }
@@ -480,7 +481,6 @@ private struct AlbumScreen: View {
     let album: CloudAlbum
     let session: LibrarySession
     let shellUI: LibraryUIState
-    let bottomInset: CGFloat
     @State private var items: [TimelineItem]?
     @State private var loadError: String?
     @State private var error: String?
@@ -489,7 +489,7 @@ private struct AlbumScreen: View {
 
     var body: some View {
         CollectionGridScreen(
-            title: album.name, items: items ?? [], session: session, bottomInset: ui.isSelecting ? 96 : bottomInset,
+            title: album.name, items: items ?? [], session: session, bottomInset: ui.isSelecting ? 96 : 0,
             isLoading: items == nil && loadError == nil, emptyMessage: loadError, ui: ui,
             album: ViewerViewController.AlbumContext(id: album.id) { Task { await reload() } }
         )
@@ -497,15 +497,15 @@ private struct AlbumScreen: View {
         .overlay(alignment: .bottom) {
             if ui.isSelecting {
                 SelectionFooter(ui: ui) { ui.shareRequested = true }
+                    .ignoresSafeArea(.container, edges: .bottom)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
         .animation(.snappy, value: ui.isSelecting)
         .task { await reload() }
         .refreshable { await reload() }
-        .onChange(of: ui.isSelecting) { _, selecting in shellUI.hidesFloatingBar = selecting }
+        .toolbar(ui.isSelecting ? .hidden : .automatic, for: .tabBar)
         .onDisappear {
-            shellUI.hidesFloatingBar = false
             ui.endSelecting()
         }
         .sheet(item: $ui.pendingSheet) { sheet in sheetView(sheet) }
@@ -672,7 +672,6 @@ private struct AllAlbumsScreen: View {
     let title: String
     let albums: [CloudAlbum]
     let session: LibrarySession
-    let bottomInset: CGFloat
 
     var body: some View {
         ScrollView {
@@ -699,7 +698,7 @@ private struct AllAlbumsScreen: View {
                 }
             }
             .padding(.horizontal, 20)
-            .padding(.bottom, bottomInset + 20)
+            .padding(.bottom, 20)
         }
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.large)
@@ -709,7 +708,6 @@ private struct AllAlbumsScreen: View {
 private struct AllMemoriesScreen: View {
     let memories: [CloudMemory]
     let session: LibrarySession
-    let bottomInset: CGFloat
 
     var body: some View {
         ScrollView {
@@ -737,7 +735,7 @@ private struct AllMemoriesScreen: View {
                 }
             }
             .padding(.horizontal, 16)
-            .padding(.bottom, bottomInset + 20)
+            .padding(.bottom, 20)
         }
         .navigationTitle("Memories")
         .navigationBarTitleDisplayMode(.large)

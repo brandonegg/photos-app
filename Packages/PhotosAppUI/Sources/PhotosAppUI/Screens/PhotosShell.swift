@@ -2,15 +2,12 @@ import CloudCore
 import Persistence
 import SwiftUI
 
-/// The signed-in app: Library and Collections with a
-/// floating glass bar (Library | Collections, Search), Search over everything, and
-/// select mode's footer in place of the bar.
+/// The signed-in app: the system tab bar (Library, Collections, and Search as its own
+/// round tab), the Library's Years | Months | All after scrolling, and select mode's footer
+/// in place of the tab bar.
 struct PhotosShell: View {
     let model: AppModel
     @State private var ui = LibraryUIState()
-
-    /// Room for the floating bar at the bottom of the screens.
-    private let barSpace: CGFloat = 100
 
     init(model: AppModel) {
         self.model = model
@@ -18,50 +15,20 @@ struct PhotosShell: View {
     }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
+        Group {
             if let session = model.session {
-                LibraryScreen(model: model, session: session, ui: ui, bottomInset: barSpace)
-                    .opacity(ui.section == .library ? 1 : 0)
-                    .allowsHitTesting(ui.section == .library)
-                    .accessibilityHidden(ui.section != .library)
-                CollectionsScreen(model: model, session: session, ui: ui, bottomInset: barSpace)
-                    .opacity(ui.section == .collections ? 1 : 0)
-                    .allowsHitTesting(ui.section == .collections)
-                    .accessibilityHidden(ui.section != .collections)
+                tabs(session)
             } else if let error = model.sessionError {
                 ContentUnavailableView("Library Unavailable", systemImage: "exclamationmark.triangle", description: Text(error))
             } else {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-
-            VStack(spacing: 12) {
-                if let toast = ui.toast {
-                    ToastView(message: toast)
-                }
-                if ui.isSelecting && ui.section == .library {
-                    SelectionFooter(ui: ui) { ui.shareRequested = true }
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                } else if !ui.hidesFloatingBar {
-                    FloatingBar(ui: ui)
-                        .padding(.bottom, 26)
-                        .transition(.opacity)
-                }
-            }
-            .animation(.snappy, value: ui.isSelecting)
-            .animation(.snappy, value: ui.hidesFloatingBar)
-            .animation(.snappy, value: ui.toast)
         }
-        .ignoresSafeArea(.container, edges: .bottom)
         .environment(\.phoneImages, model.session?.phoneImages)
         .task(id: model.session?.account.userID) {
             // First launch with the phone library: ask for Photos access (iOS shows its prompt once).
             if let session = model.session, session.photoAccess == .notDetermined {
                 await session.requestPhotoAccess()
-            }
-        }
-        .fullScreenCover(isPresented: $ui.showsSearch) {
-            if let session = model.session {
-                SearchScreen(session: session, ui: ui)
             }
         }
         .sheet(item: $ui.pendingSheet) { sheet in
@@ -76,6 +43,55 @@ struct PhotosShell: View {
         } message: {
             Text(confirmationMessage)
         }
+    }
+
+    // MARK: Tabs
+
+    private func tabs(_ session: LibrarySession) -> some View {
+        TabView(selection: $ui.section) {
+            Tab("Library", systemImage: "photo.on.rectangle.angled", value: AppSection.library) {
+                LibraryScreen(model: model, session: session, ui: ui)
+                    .overlay(alignment: .bottom) { libraryBottom }
+                    .toolbar(ui.isSelecting ? .hidden : .automatic, for: .tabBar)
+            }
+            Tab("Collections", systemImage: "rectangle.stack.fill", value: AppSection.collections) {
+                CollectionsScreen(model: model, session: session, ui: ui)
+                    .overlay(alignment: .bottom) { toast.padding(.bottom, 12) }
+            }
+            Tab(value: AppSection.search, role: .search) {
+                SearchScreen(session: session, ui: ui)
+            }
+        }
+        .modifier(TabBarBehavior(ui: ui))
+    }
+
+    /// The toast, and select mode's footer (the tab bar hides) or, without a bottom
+    /// accessory, the floating Years | Months | All.
+    private var libraryBottom: some View {
+        VStack(spacing: 12) {
+            toast
+            if ui.isSelecting {
+                SelectionFooter(ui: ui) { ui.shareRequested = true }
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            } else if ui.barMode == .timeScale && !TabBarBehavior.hasAccessory {
+                FloatingTimeScalePicker(ui: ui)
+                    .transition(.scale(scale: 0.9).combined(with: .opacity))
+            }
+        }
+        .padding(.bottom, ui.isSelecting ? 0 : 12)
+        // The footer sits at the screen's edge, where the tab bar was.
+        .ignoresSafeArea(.container, edges: ui.isSelecting ? .bottom : [])
+        .animation(.snappy, value: ui.isSelecting)
+        .animation(.smooth(duration: 0.35), value: ui.barMode)
+    }
+
+    private var toast: some View {
+        VStack {
+            if let toast = ui.toast {
+                ToastView(message: toast)
+            }
+        }
+        .animation(.snappy, value: ui.toast)
     }
 
     // MARK: Select mode sheets and confirmations
@@ -156,5 +172,55 @@ struct PhotosShell: View {
                 ui.showToast((error as? CloudError)?.message ?? error.localizedDescription)
             }
         }
+    }
+}
+
+/// iOS 26's tab bar: it shrinks while the Library or Collections scroll, and on iOS 26.1
+/// and later the Library's Years | Months | All rides in its bottom accessory.
+private struct TabBarBehavior: ViewModifier {
+    @Bindable var ui: LibraryUIState
+
+    static var hasAccessory: Bool {
+        if #available(iOS 26.1, *) { true } else { false }
+    }
+
+    private var showsAccessory: Bool {
+        ui.section == .library && ui.barMode == .timeScale && !ui.isSelecting
+    }
+
+    func body(content: Content) -> some View {
+        if #available(iOS 26.1, *) {
+            content
+                .tabBarMinimizeBehavior(minimizeBehavior)
+                .tabViewSearchActivation(.searchTabSelection)
+                .tabViewBottomAccessory(isEnabled: showsAccessory) {
+                    TimeScaleAccessory(ui: ui)
+                }
+        } else if #available(iOS 26.0, *) {
+            content
+                .tabBarMinimizeBehavior(minimizeBehavior)
+                .tabViewSearchActivation(.searchTabSelection)
+        } else {
+            content
+        }
+    }
+
+    /// The Library starts at the newest photos at the bottom, so browsing back in time
+    /// scrolls up; elsewhere, the usual scrolling down.
+    @available(iOS 26.0, *)
+    private var minimizeBehavior: TabBarMinimizeBehavior {
+        ui.section == .library ? .onScrollUp : .onScrollDown
+    }
+}
+
+/// The bottom accessory: Years | Months | All, a little narrower beside the minimized tab bar.
+@available(iOS 26.0, *)
+private struct TimeScaleAccessory: View {
+    @Bindable var ui: LibraryUIState
+    @Environment(\.tabViewBottomAccessoryPlacement) private var placement
+
+    var body: some View {
+        TimeScalePicker(ui: ui)
+            .padding(.horizontal, placement == .inline ? 6 : 12)
     }
 }

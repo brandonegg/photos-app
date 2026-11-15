@@ -14,7 +14,7 @@ extension View {
         if #available(iOS 26.0, *) {
             let glass: SwiftUI.Glass = switch style {
             case .regular: .regular
-            // Clearer glass: more of the photos show through (the floating bar).
+            // Clearer glass: more of the photos show through.
             case .clear: .clear.tint(Color(.systemBackground).opacity(0.18))
             // Clear glass with a dark tint, for buttons over the dark Library band.
             case .dark: .clear.tint(.black.opacity(0.28))
@@ -22,16 +22,6 @@ extension View {
             self.glassEffect(interactive ? glass.interactive() : glass, in: shape)
         } else {
             self.background(style == .dark ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(.regularMaterial), in: shape)
-        }
-    }
-
-    /// Lets glass pieces morph into each other (Library bar ↔ time scale).
-    @ViewBuilder
-    func glassMorphID(_ id: String, in namespace: Namespace.ID) -> some View {
-        if #available(iOS 26.0, *) {
-            self.glassEffectID(id, in: namespace)
-        } else {
-            self
         }
     }
 }

@@ -137,7 +137,7 @@ struct InfoView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .sheet(item: $openedPerson) { person in
             NavigationStack {
-                PersonScreen(person: person, session: model.session, bottomInset: 0)
+                PersonScreen(person: person, session: model.session)
             }
             .environment(\.phoneImages, model.session.phoneImages)
         }

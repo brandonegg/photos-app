@@ -3,15 +3,14 @@ import MediaCache
 import Persistence
 import SwiftUI
 
-/// Search: a large title, Recents (past searches,
-/// Recently Viewed, Recently Shared) with Clear, suggestion chips above a glass
-/// search field at the bottom, and ✕ to close. Results come from the metadata on
+/// Search, the tab bar's search tab: a large title, Recents (past searches,
+/// Recently Viewed, Recently Shared) with Clear, and suggestion chips; the system search
+/// field (in the tab bar on iOS 26, under the title before). Results come from the metadata on
 /// this phone at once (offline too), then from the server's smart search (by what's in the
 /// photo) and face recognition, when the server has machine learning.
 struct SearchScreen: View {
     let session: LibrarySession
     @Bindable var ui: LibraryUIState
-    @Environment(\.dismiss) private var dismiss
     @State private var text = ""
     @State private var results: [TimelineItem] = []
     /// Matches by meaning from the server, after the local ones.
@@ -26,7 +25,8 @@ struct SearchScreen: View {
     @State private var path = NavigationPath()
     @State private var columns = 3
     @FocusState private var fieldFocused: Bool
-    @State private var keyboard = KeyboardObserver()
+    /// The bottom safe area (tab bar, or keyboard), cleared by the results grid.
+    @State private var safeBottom: CGFloat = 0
 
     private enum Route: Hashable {
         case viewed, shared
@@ -47,47 +47,39 @@ struct SearchScreen: View {
 
     var body: some View {
         NavigationStack(path: $path) {
-            GeometryReader { proxy in
-                let keyboardInset = max(keyboard.height - proxy.safeAreaInsets.bottom, 0)
-                // The content can't push the field down: it's capped to the space above the
-                // keyboard (Home scrolls), and the field is placed on its own just above the
-                // keyboard. Before, Home grew taller than that space (with People) and the
-                // bottom-aligned stack slid the field under the keyboard.
-                // A real container, not a Group: a Group applies the modifiers below to each
-                // branch, so the first letter (Home → results) rebuilt the field and dropped the keyboard.
-                ZStack(alignment: .top) {
-                    if text.trimmingCharacters(in: .whitespaces).isEmpty {
-                        home
-                    } else {
-                        resultsView
-                    }
+            // A real container, not a Group: a Group applies the modifiers below to each
+            // branch, so the first letter (Home → results) would rebuild the field.
+            ZStack(alignment: .top) {
+                if text.trimmingCharacters(in: .whitespaces).isEmpty {
+                    home
+                } else {
+                    resultsView
                 }
-                .padding(.bottom, keyboardInset)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .background { Color(.systemBackground).ignoresSafeArea() }
-                .overlay(alignment: .bottom) {
-                    bottomBar
-                        .padding(.bottom, keyboardInset)
-                }
-                .animation(.smooth(duration: keyboard.animationDuration), value: keyboard.height)
             }
-            .ignoresSafeArea(.keyboard)
-            .toolbar(.hidden, for: .navigationBar)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .background { Color(.systemBackground).ignoresSafeArea() }
+            .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.bottom } action: { safeBottom = $0 }
+            .navigationTitle("Search")
+            .searchable(text: $text, placement: Self.fieldPlacement, prompt: Text("Search your library…"))
+            .searchFocused($fieldFocused)
+            .autocorrectionDisabled()
+            .onSubmit(of: .search) { SearchHistory.recordQuery(text); recentQueries = SearchHistory.queries }
             .navigationDestination(for: Route.self) { route in
                 if case .person(let person) = route {
-                    PersonScreen(person: person, session: session, bottomInset: 0)
+                    PersonScreen(person: person, session: session)
                 } else {
                     let ids = route == .viewed ? viewed : shared
                     let byID = Dictionary(session.timeline.items.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
                     CollectionGridScreen(
                         title: route == .viewed ? String(localized: "Recently Viewed") : String(localized: "Recently Shared"),
-                        items: ids.compactMap { byID[$0] }.reversed(), session: session, bottomInset: 0
+                        items: ids.compactMap { byID[$0] }.reversed(), session: session
                     )
                 }
             }
         }
+        // Opening the tab starts typing (iOS 26 does it with the tab bar's field itself).
+        .onAppear { fieldFocused = true }
         .task {
-            fieldFocused = true
             let places = await session.topPlaces(limit: 2)
             let year = Calendar.current.component(.year, from: .now)
             suggestions = places.map { String(localized: "\($0)") } + [String(localized: "Videos in \(String(year))"), String(localized: "Favourites")]
@@ -132,11 +124,6 @@ struct SearchScreen: View {
 
     private var homeContent: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Search")
-                .font(.system(size: 34, weight: .bold))
-                .padding(.horizontal, 20)
-                .padding(.top, 8)
-                .accessibilityAddTraits(.isHeader)
             if !people.isEmpty {
                 Text("People")
                     .font(.system(size: 22, weight: .bold))
@@ -213,7 +200,7 @@ struct SearchScreen: View {
                 }
             }
             .padding(.horizontal, 14)
-            .padding(.bottom, 84)
+            .padding(.bottom, 20)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -274,59 +261,16 @@ struct SearchScreen: View {
                 PhotoGridView(
                     snapshot: TimelineSnapshot(items: results, version: searchedText.hashValue &+ smartResults.count, isLoaded: true),
                     session: session, columns: $columns,
-                    insets: UIEdgeInsets(top: 0, left: 0, bottom: 90, right: 0)
+                    insets: UIEdgeInsets(top: 0, left: 0, bottom: safeBottom + 12, right: 0)
                 )
                 .ignoresSafeArea(edges: .bottom)
             }
         }
     }
 
-    // MARK: Search field
-
-    private var bottomBar: some View {
-        GlassGroup(spacing: 10) {
-            HStack(spacing: 10) {
-                HStack(spacing: 8) {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundStyle(.secondary)
-                    TextField("Search your library…", text: $text)
-                        .focused($fieldFocused)
-                        .submitLabel(.search)
-                        .autocorrectionDisabled()
-                        .onSubmit { SearchHistory.recordQuery(text); recentQueries = SearchHistory.queries }
-                    if text.isEmpty {
-                        Button { fieldFocused = true } label: {
-                            Image(systemName: "mic")
-                                .foregroundStyle(.secondary)
-                        }
-                        .accessibilityLabel("Dictate")
-                    } else {
-                        Button { text = "" } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundStyle(.tertiary)
-                        }
-                        .accessibilityLabel("Clear Text")
-                    }
-                }
-                .font(.system(size: 17))
-                .padding(.horizontal, 16)
-                .frame(height: 50)
-                .glassSurface(Capsule())
-                Button {
-                    dismiss()
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 19, weight: .medium))
-                        .foregroundStyle(.primary)
-                        .frame(width: 50, height: 50)
-                }
-                .buttonStyle(.plain)
-                .glassSurface(Circle())
-                .accessibilityLabel("Close Search")
-            }
-        }
-        .padding(.horizontal, 8)
-        .padding(.bottom, 8)
+    /// In the tab bar on iOS 26; before, always under the title.
+    private static var fieldPlacement: SearchFieldPlacement {
+        if #available(iOS 26.0, *) { .automatic } else { .navigationBarDrawer(displayMode: .always) }
     }
 }
 

@@ -8,7 +8,6 @@ import SwiftUI
 struct HiddenAlbumScreen: View {
     let session: LibrarySession
     let shellUI: LibraryUIState
-    let bottomInset: CGFloat
     @State private var model: HiddenAlbumModel?
     @State private var pin = ""
     @State private var ui = LibraryUIState()
@@ -30,9 +29,8 @@ struct HiddenAlbumScreen: View {
             .onAppear {
                 if vault.state == .unlocked, model == nil { model = HiddenAlbumModel(session: session) }
             }
-            .onChange(of: ui.isSelecting) { _, selecting in shellUI.hidesFloatingBar = selecting }
+            .toolbar(ui.isSelecting ? .hidden : .automatic, for: .tabBar)
             .onDisappear {
-                shellUI.hidesFloatingBar = false
                 ui.endSelecting()
                 Task { await vault.lock() }
             }
@@ -64,7 +62,7 @@ struct HiddenAlbumScreen: View {
             if let model {
                 CollectionGridScreen(
                     title: String(localized: "Hidden"), items: model.snapshot.items, session: session,
-                    bottomInset: ui.isSelecting ? 96 : bottomInset, isLoading: !model.snapshot.isLoaded,
+                    bottomInset: ui.isSelecting ? 96 : 0, isLoading: !model.snapshot.isLoaded,
                     emptyMessage: String(localized: "Photos and videos you hide appear here. Hide them from the ••• menu in a photo."),
                     ui: ui, mode: .hidden
                 )
@@ -72,6 +70,7 @@ struct HiddenAlbumScreen: View {
                 .overlay(alignment: .bottom) {
                     if ui.isSelecting {
                         SelectionFooter(ui: ui) { ui.shareRequested = true }
+                            .ignoresSafeArea(.container, edges: .bottom)
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
                 }

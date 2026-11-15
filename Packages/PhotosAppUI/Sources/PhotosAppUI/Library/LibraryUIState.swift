@@ -25,15 +25,18 @@ enum TimeScale: String, CaseIterable, Sendable {
     case years, months, all
 }
 
-/// Bottom bar: Library | Collections (+ Search), or after scrolling, the time scale.
+/// The Library's bottom chrome: just the tab bar, or after scrolling away from the newest
+/// photos, the Years | Months | All picker with it.
 enum BarMode: Sendable {
     case tabs
     case timeScale
 }
 
-enum AppSection: Sendable {
+/// The tabs of the system tab bar.
+enum AppSection: Hashable, Sendable {
     case library
     case collections
+    case search
 }
 
 /// State shared by the Library's SwiftUI chrome (header, bottom bar, menus) and the
@@ -47,9 +50,6 @@ final class LibraryUIState {
     var sort = LibrarySort.captured
     var filter = LibraryFilter.all
     var options = LibraryViewOptions()
-    var showsSearch = false
-    /// A screen with its own select footer (Recently Deleted) hides the floating bar.
-    var hidesFloatingBar = false
     var pendingSheet: SelectionSheet?
     /// Set by the footer's Share button; the grid opens the share screen and clears it.
     var shareRequested = false

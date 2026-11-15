@@ -217,7 +217,6 @@ private struct SharePersonPicker: View {
 struct SharedLibraryScreen: View {
     let library: SharedLibrary
     let session: LibrarySession
-    var bottomInset: CGFloat = 0
     @State private var items: [TimelineItem]?
 
     var body: some View {
@@ -226,7 +225,6 @@ struct SharedLibraryScreen: View {
             subtitle: SharedLibraryView.count(items?.count ?? library.itemCount),
             items: items ?? [],
             session: session,
-            bottomInset: bottomInset,
             isLoading: items == nil,
             emptyMessage: String(localized: "Nothing shared yet. Photos appear here after the next sync.")
         )

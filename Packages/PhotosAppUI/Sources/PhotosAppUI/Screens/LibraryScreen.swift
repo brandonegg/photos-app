@@ -241,6 +241,7 @@ struct PhotoGridView: UIViewControllerRepresentable {
                 controller.onScrollInfo = { [weak ui] range, interacting, atBottom, userScrolled in
                     ui?.gridScrolled(range: range, interacting: interacting, atBottom: atBottom, userScrolled: userScrolled)
                 }
+                controller.onScrolledBack = { [weak ui] in ui?.gridScrolledBack() }
             }
             controller.isSelected = { [weak ui] id in ui?.isSelected(id) ?? false }
             controller.onSelectionChange = { [weak ui] ids, selected in

@@ -46,6 +46,9 @@ enum AppSection: Hashable, Sendable {
 final class LibraryUIState {
     var section = AppSection.library
     var barMode = BarMode.tabs
+    /// The Years | Months | All accessory is put away because the minimized tab bar was
+    /// expanded (tapped, like Photos); it comes back when the grid is next scrolled back in time.
+    private(set) var isTimeScaleDismissed = false
     var timeScale = TimeScale.all
     var sort = LibrarySort.captured
     var filter = LibraryFilter.all
@@ -88,6 +91,7 @@ final class LibraryUIState {
         if !isSelecting {
             if atBottom, !wasAtBottom {
                 if barMode != .tabs { barMode = .tabs }
+                if isTimeScaleDismissed { isTimeScaleDismissed = false }
             } else if !atBottom, barMode == .tabs, userScrolled || (wasAtBottom && interacting) {
                 barMode = .timeScale
             }
@@ -104,6 +108,16 @@ final class LibraryUIState {
                 self?.isIdleLongEnough = true
             }
         }
+    }
+
+    /// The tab bar went from minimized to expanded: show just Library | Collections.
+    func tabBarExpanded() {
+        if barMode == .timeScale, !isTimeScaleDismissed { isTimeScaleDismissed = true }
+    }
+
+    /// The user dragged the grid back in time, which minimizes the tab bar again.
+    func gridScrolledBack() {
+        if isTimeScaleDismissed { isTimeScaleDismissed = false }
     }
 
     /// Shows a short message near the bottom for a couple of seconds.

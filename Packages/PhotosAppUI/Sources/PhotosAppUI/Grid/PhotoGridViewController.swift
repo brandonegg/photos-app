@@ -29,6 +29,9 @@ final class PhotoGridViewController: UIViewController {
     /// user is touching or moving the grid, whether it's at the newest photos, and
     /// whether the user scrolled (which morphs the bottom bar).
     var onScrollInfo: ((_ range: ClosedRange<Date>?, _ interacting: Bool, _ atBottom: Bool, _ userScrolled: Bool) -> Void)?
+    /// The user dragged toward older photos (up the grid), which minimizes the tab bar.
+    var onScrolledBack: (() -> Void)?
+    private var lastDragOffsetY: CGFloat?
     /// Space under the overlaid header and above the tab bar (or select footer).
     var contentInsets = UIEdgeInsets.zero {
         didSet { if contentInsets != oldValue { applyInsets() } }
@@ -809,6 +812,13 @@ extension PhotoGridViewController: UICollectionViewDataSource, UICollectionViewD
 
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         reportScroll(userScrolled: scrollView.isDragging)
+        if scrollView.isDragging {
+            let offsetY = scrollView.contentOffset.y
+            if let last = lastDragOffsetY, offsetY < last - 1 { onScrolledBack?() }
+            lastDragOffsetY = offsetY
+        } else {
+            lastDragOffsetY = nil
+        }
         guard scrollView.isDragging || scrollView.isDecelerating || scrubber.isDragging else { return }
         scrubber.scrollPositionChanged(fraction: scrollFraction)
     }

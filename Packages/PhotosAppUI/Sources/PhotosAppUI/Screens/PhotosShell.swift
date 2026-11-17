@@ -185,7 +185,7 @@ private struct TabBarBehavior: ViewModifier {
     }
 
     private var showsAccessory: Bool {
-        ui.section == .library && ui.barMode == .timeScale && !ui.isSelecting
+        ui.section == .library && ui.barMode == .timeScale && !ui.isSelecting && !ui.isTimeScaleDismissed
     }
 
     func body(content: Content) -> some View {
@@ -214,6 +214,8 @@ private struct TabBarBehavior: ViewModifier {
 }
 
 /// The bottom accessory: Years | Months | All, a little narrower beside the minimized tab bar.
+/// Tapping the minimized tab bar expands it to Library | Collections alone, as in Photos: the
+/// accessory steps aside until the grid is scrolled back again.
 @available(iOS 26.0, *)
 private struct TimeScaleAccessory: View {
     @Bindable var ui: LibraryUIState
@@ -222,5 +224,8 @@ private struct TimeScaleAccessory: View {
     var body: some View {
         TimeScalePicker(ui: ui)
             .padding(.horizontal, placement == .inline ? 6 : 12)
+            .onChange(of: placement) { old, new in
+                if old == .inline, new == .expanded { ui.tabBarExpanded() }
+            }
     }
 }

@@ -74,7 +74,14 @@ struct TimeScaleRow: View {
                 .glassSurface(Capsule())
 
             Button {
-                ui.section = .search
+                // As if from the tab bar's own Search tab: bring the tab bar back first. Picked
+                // while it's hidden, Search opens with its field at the top of the screen
+                // instead of in the tab bar, above the keyboard.
+                ui.showTabBar()
+                Task { @MainActor in
+                    await Task.yield()
+                    ui.section = .search
+                }
             } label: {
                 Image(systemName: "magnifyingglass")
                     .font(.system(size: 21, weight: .medium))

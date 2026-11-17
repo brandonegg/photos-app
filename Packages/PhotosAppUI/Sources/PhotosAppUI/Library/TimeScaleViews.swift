@@ -12,6 +12,18 @@ struct TimeScaleView: View {
     @Bindable var ui: LibraryUIState
     let topInset: CGFloat
     let bottomInset: CGFloat
+    @State private var isAtBottom = true
+    @State private var isUserScrolling = false
+    @State private var offsetY: CGFloat = 0
+    /// Where the current drag last moved back in time from; nil when no finger is down.
+    @State private var dragStartOffset: CGFloat?
+
+    private var isDragging: Bool { dragStartOffset != nil }
+
+    private struct ScrollPosition: Equatable {
+        var offsetY: CGFloat
+        var atBottom: Bool
+    }
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -32,6 +44,27 @@ struct TimeScaleView: View {
                 .padding(.horizontal, 12)
             }
             .scrollIndicators(.hidden)
+            // Report scrolling like the All grid, so the bottom bar follows it here too.
+            .onScrollPhaseChange { _, phase in
+                isUserScrolling = phase == .interacting || phase == .decelerating
+                dragStartOffset = phase == .interacting ? offsetY : nil
+                ui.timeScaleScrolled(atBottom: isAtBottom, userScrolling: isUserScrolling)
+            }
+            .onScrollGeometryChange(for: ScrollPosition.self) { geometry in
+                let maxOffset = geometry.contentSize.height - geometry.containerSize.height + geometry.contentInsets.bottom
+                return ScrollPosition(offsetY: geometry.contentOffset.y, atBottom: geometry.contentOffset.y >= maxOffset - 44)
+            } action: { _, position in
+                // Dragged back in time (finger down), as in the grid: the row returns.
+                if isDragging, let start = dragStartOffset, position.offsetY < start - 1 {
+                    ui.gridScrolledBack()
+                    dragStartOffset = position.offsetY
+                }
+                offsetY = position.offsetY
+                if position.atBottom != isAtBottom {
+                    isAtBottom = position.atBottom
+                    ui.timeScaleScrolled(atBottom: position.atBottom, userScrolling: isUserScrolling)
+                }
+            }
             .onAppear {
                 if let anchor = ui.timeScaleAnchor, groups.contains(where: { $0.id == anchor }) {
                     proxy.scrollTo(anchor, anchor: .top)

@@ -87,6 +87,22 @@ final class LibraryUIState {
 
     func gridScrolled(range: ClosedRange<Date>?, interacting: Bool, atBottom: Bool, userScrolled: Bool) {
         if range != visibleRange { visibleRange = range }
+        scrolled(interacting: interacting, atBottom: atBottom, userScrolled: userScrolled)
+    }
+
+    /// Years and Months scrolling, which drives the bottom bar as the grid does: the time
+    /// scale row while browsing back, the tab bar at the newest. Only the user's own scrolling
+    /// changes the bar (opening Months lands at the newest without putting the row away).
+    func timeScaleScrolled(atBottom: Bool, userScrolling: Bool) {
+        if userScrolling {
+            scrolled(interacting: true, atBottom: atBottom, userScrolled: true)
+        } else {
+            if atBottom != isAtBottom { isAtBottom = atBottom }
+            scrolled(interacting: false, atBottom: atBottom, userScrolled: false)
+        }
+    }
+
+    private func scrolled(interacting: Bool, atBottom: Bool, userScrolled: Bool) {
         let wasAtBottom = isAtBottom
         if atBottom != isAtBottom { isAtBottom = atBottom }
         // Years | Months | All while browsing, back to Library | Collections at the end.

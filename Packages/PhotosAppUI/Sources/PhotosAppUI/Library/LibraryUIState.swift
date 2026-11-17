@@ -83,6 +83,8 @@ final class LibraryUIState {
     var timeScaleAnchor: String?
     var zoomCommand: ZoomCommand?
     var scrollTarget: Date?
+    /// The Library tab was tapped while already showing: scroll to the newest photos.
+    var scrollToNewestRequested = false
 
     enum ZoomCommand: Equatable { case zoomIn, zoomOut }
 

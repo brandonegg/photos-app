@@ -47,8 +47,21 @@ struct PhotosShell: View {
 
     // MARK: Tabs
 
+    /// The tab selection. Tapping Library while it's showing goes to the newest photos, as in
+    /// Photos, instead of the system's scroll to the top (the oldest photos here).
+    private var sectionSelection: Binding<AppSection> {
+        Binding {
+            ui.section
+        } set: { newValue in
+            if newValue == .library, ui.section == .library, !ui.isSelecting {
+                ui.scrollToNewestRequested = true
+            }
+            ui.section = newValue
+        }
+    }
+
     private func tabs(_ session: LibrarySession) -> some View {
-        TabView(selection: $ui.section) {
+        TabView(selection: sectionSelection) {
             Tab("Library", systemImage: "photo.on.rectangle.angled", value: AppSection.library) {
                 LibraryScreen(model: model, session: session, ui: ui)
                     .overlay(alignment: .bottom) { libraryBottom }

@@ -23,13 +23,13 @@ extension Client {
             switch try await featuresOutput {
             case .ok(let response): features = try response.body.json
             case .undocumented(let status, let payload):
-                throw await APIError.from(statusCode: status, payload: payload, operation: "read the server's sign-in options")
+                throw await APIError.from(statusCode: status, payload: payload, operation: "sign-in options")
             }
             let config: Components.Schemas.ServerConfigDto
             switch try await configOutput {
             case .ok(let response): config = try response.body.json
             case .undocumented(let status, let payload):
-                throw await APIError.from(statusCode: status, payload: payload, operation: "read the server's sign-in options")
+                throw await APIError.from(statusCode: status, payload: payload, operation: "sign-in options")
             }
             return LoginOptions(
                 passwordLogin: features.passwordLogin,
@@ -55,7 +55,13 @@ extension Client {
                 }
                 return url
             case .undocumented(let status, let payload):
-                throw await APIError.from(statusCode: status, payload: payload, operation: "start the sign-in")
+                let error = await APIError.from(statusCode: status, payload: payload, operation: "single sign-on")
+                // Immich looks up the identity provider (OpenID discovery) before anything else.
+                guard error.message.contains("OAuth discovery") else { throw error }
+                throw APIError(
+                    kind: error.kind,
+                    message: error.message + "\n\nThe Cloud server couldn't read your identity provider's settings. In the server's OAuth settings, check that the Issuer URL is right and that the server can reach it."
+                )
             }
         } catch {
             throw APIError.wrap(error, operation: "Start sign-in")
@@ -77,7 +83,7 @@ extension Client {
                     isAdmin: dto.isAdmin
                 )
             case .undocumented(let status, let payload):
-                throw await APIError.from(statusCode: status, payload: payload, operation: "finish the sign-in")
+                throw await APIError.from(statusCode: status, payload: payload, operation: "single sign-on")
             }
         } catch {
             throw APIError.wrap(error, operation: "Finish sign-in")

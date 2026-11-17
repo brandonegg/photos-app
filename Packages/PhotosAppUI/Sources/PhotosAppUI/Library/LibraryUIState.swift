@@ -46,14 +46,9 @@ enum AppSection: Hashable, Sendable {
 final class LibraryUIState {
     var section = AppSection.library
     var barMode = BarMode.tabs
-    /// The Years | Months | All accessory is put away because the minimized tab bar was
-    /// expanded (tapped, like Photos); it comes back when the grid is next scrolled back in time.
+    /// The time scale row was put away by tapping its Library button (like expanding the
+    /// minimized tab bar in Photos); it comes back when the grid is next dragged back in time.
     private(set) var isTimeScaleDismissed = false
-    /// Set for a moment on arriving at the newest photos: the tab bar stops minimizing, which
-    /// expands it. iOS only expands a minimized bar on a scroll the other way, so arriving
-    /// otherwise (switching Months to All) would leave it minimized with Years | Months | All gone.
-    private(set) var expandsTabBar = false
-    @ObservationIgnored private var expandTask: Task<Void, Never>?
     var timeScale = TimeScale.all
     var sort = LibrarySort.captured
     var filter = LibraryFilter.all
@@ -92,12 +87,28 @@ final class LibraryUIState {
 
     func gridScrolled(range: ClosedRange<Date>?, interacting: Bool, atBottom: Bool, userScrolled: Bool) {
         if range != visibleRange { visibleRange = range }
+        scrolled(interacting: interacting, atBottom: atBottom, userScrolled: userScrolled)
+    }
+
+    /// Years and Months scrolling, which drives the bottom bar as the grid does: the time
+    /// scale row while browsing back, the tab bar at the newest. Only the user's own scrolling
+    /// changes the bar (opening Months lands at the newest without putting the row away).
+    func timeScaleScrolled(atBottom: Bool, userScrolling: Bool) {
+        if userScrolling {
+            scrolled(interacting: true, atBottom: atBottom, userScrolled: true)
+        } else {
+            if atBottom != isAtBottom { isAtBottom = atBottom }
+            scrolled(interacting: false, atBottom: atBottom, userScrolled: false)
+        }
+    }
+
+    private func scrolled(interacting: Bool, atBottom: Bool, userScrolled: Bool) {
         let wasAtBottom = isAtBottom
         if atBottom != isAtBottom { isAtBottom = atBottom }
         // Years | Months | All while browsing, back to Library | Collections at the end.
         if !isSelecting {
             if atBottom, !wasAtBottom {
-                if barMode != .tabs { barMode = .tabs; expandTabBar() }
+                if barMode != .tabs { barMode = .tabs }
                 if isTimeScaleDismissed { isTimeScaleDismissed = false }
             } else if !atBottom, barMode == .tabs, userScrolled || (wasAtBottom && interacting) {
                 barMode = .timeScale
@@ -117,22 +128,20 @@ final class LibraryUIState {
         }
     }
 
-    private func expandTabBar() {
-        expandTask?.cancel()
-        expandsTabBar = true
-        expandTask = Task { [weak self] in
-            try? await Task.sleep(for: .milliseconds(400))
-            guard !Task.isCancelled else { return }
-            self?.expandsTabBar = false
-        }
+    /// The Library's bottom row while browsing: its own Library button, Years | Months | All
+    /// and Search, in place of the tab bar (which is hidden meanwhile). Drawn by the app rather
+    /// than as the tab bar's bottom accessory, which iOS stacks above the full-width bar.
+    var showsTimeScaleRow: Bool {
+        barMode == .timeScale && !isSelecting && !isTimeScaleDismissed
     }
 
-    /// The tab bar went from minimized to expanded: show just Library | Collections.
-    func tabBarExpanded() {
+    /// The time scale row's Library button was tapped: back to the full tab bar,
+    /// Library | Collections and Search, until the grid is dragged back in time.
+    func showTabBar() {
         if barMode == .timeScale, !isTimeScaleDismissed { isTimeScaleDismissed = true }
     }
 
-    /// The user dragged the grid back in time, which minimizes the tab bar again.
+    /// The user dragged the grid back in time: the time scale row replaces the tab bar again.
     func gridScrolledBack() {
         if isTimeScaleDismissed { isTimeScaleDismissed = false }
     }

@@ -30,6 +30,7 @@ final class PhotoGridViewController: UIViewController {
     /// whether the user scrolled (which morphs the bottom bar).
     var onScrollInfo: ((_ range: ClosedRange<Date>?, _ interacting: Bool, _ atBottom: Bool, _ userScrolled: Bool) -> Void)?
     /// The user dragged toward older photos (up the grid), which minimizes the tab bar.
+    /// Finger on the grid only, not the momentum that follows.
     var onScrolledBack: (() -> Void)?
     private var lastDragOffsetY: CGFloat?
     /// Space under the overlaid header and above the tab bar (or select footer).
@@ -205,7 +206,10 @@ final class PhotoGridViewController: UIViewController {
         collectionView.verticalScrollIndicatorInsets = collectionView.contentInset
         scrubberTop?.constant = contentInsets.top + 4
         scrubberBottom?.constant = -contentInsets.bottom - 4
-        if wasAtBottom, didInitialScroll, !opensAtTop { scrollToBottom() }
+        // Keep the newest photos in view, but not while the user scrolls: setting the offset
+        // then stops the grid dead instead of letting it bounce at the end.
+        let isScrolling = collectionView.isDragging || collectionView.isDecelerating
+        if wasAtBottom, didInitialScroll, !opensAtTop, !isScrolling { scrollToBottom() }
     }
 
     /// Select mode › Share: opens the share screen at the first selected item, which
@@ -827,7 +831,10 @@ extension PhotoGridViewController: UICollectionViewDataSource, UICollectionViewD
 
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         reportScroll(userScrolled: scrollView.isDragging)
-        if scrollView.isDragging {
+        // Only while the finger is down: `isDragging` stays true through the momentum after
+        // a drag, and a tap on the minimized tab bar then (expanding it, which puts Years |
+        // Months | All away) would see the accessory come straight back above the expanded bar.
+        if scrollView.isDragging && scrollView.isTracking {
             let offsetY = scrollView.contentOffset.y
             if let last = lastDragOffsetY, offsetY < last - 1 { onScrolledBack?() }
             lastDragOffsetY = offsetY

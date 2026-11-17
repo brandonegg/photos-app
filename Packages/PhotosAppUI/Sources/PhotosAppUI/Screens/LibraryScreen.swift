@@ -14,6 +14,8 @@ struct LibraryScreen: View {
     @State private var headerBottom: CGFloat = 120
     /// The bottom safe area: the tab bar (and its accessory), or just the home indicator.
     @State private var safeBottom: CGFloat = 0
+    /// The bottom safe area with the tab bar showing, kept while the time scale row replaces it.
+    @State private var tabBarBottom: CGFloat = 0
     @State private var timeGroups = TimeGroupCache()
 
     var body: some View {
@@ -37,15 +39,24 @@ struct LibraryScreen: View {
                 Spacer()
                 StatusBanner(model: model, session: session)
                     .padding(.horizontal)
-                    .padding(.bottom, 8)
+                    // Above the time scale row as above the tab bar.
+                    .padding(.bottom, 8 + (ui.isSelecting ? 0 : max(0, tabBarBottom - safeBottom)))
             }
         }
-        .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.bottom } action: { safeBottom = $0 }
+        .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.bottom } action: { value in
+            safeBottom = value
+            // The largest seen with the tab bar showing: while it comes back after the row,
+            // the safe area is briefly without it.
+            if !ui.isSelecting, !ui.showsTimeScaleRow { tabBarBottom = max(tabBarBottom, value) }
+        }
     }
 
-    /// Select mode's footer replaces the tab bar; the grid clears it as before.
+    /// Select mode's footer replaces the tab bar; the grid clears it as before. The time scale
+    /// row takes the tab bar's place, so the grid keeps the tab bar's inset through the swap
+    /// either way (a change at the newest photos would stop a bounce there).
     private var bottomPadding: CGFloat {
-        (ui.isSelecting ? max(safeBottom, 96) : safeBottom) + 12
+        if ui.isSelecting { return max(safeBottom, 96) + 12 }
+        return max(safeBottom, tabBarBottom) + 12
     }
 
     @ViewBuilder

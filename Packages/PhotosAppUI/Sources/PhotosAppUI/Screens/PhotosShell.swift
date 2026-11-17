@@ -223,7 +223,7 @@ private struct TimeScaleAccessory: View {
 
     var body: some View {
         TimeScalePicker(ui: ui)
-            .padding(.horizontal, placement == .inline ? 6 : 12)
+            .padding(.horizontal, placement == .inline ? 0 : 4)
             .onChange(of: placement) { old, new in
                 if old == .inline, new == .expanded { ui.tabBarExpanded() }
             }

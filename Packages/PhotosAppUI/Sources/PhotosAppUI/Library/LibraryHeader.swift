@@ -19,15 +19,17 @@ struct LibraryHeader: View {
                     .font(.system(size: 34, weight: .bold))
                     .foregroundStyle(.white)
                     .accessibilityAddTraits(.isHeader)
+                    .shadow(color: .black.opacity(0.25), radius: 6, y: 1)
                 Spacer(minLength: 8)
-                trailingControls
+                // Its own view: the subtitle changes on every scroll tick, the buttons shouldn't redraw with it.
+                LibraryHeaderControls(ui: ui, selectionMenu: selectionMenu)
             }
             subtitle
                 .frame(height: 24, alignment: .leading)
+                .shadow(color: .black.opacity(0.25), radius: 6, y: 1)
         }
         .padding(.horizontal, 20)
         .padding(.bottom, 14)
-        .shadow(color: .black.opacity(0.25), radius: 6, y: 1)
         .alert("Syncing with Cloud Paused", isPresented: $showsPausedAlert) {
             Button("OK", role: .cancel) {}
         }
@@ -78,47 +80,53 @@ struct LibraryHeader: View {
                 .contentTransition(.numericText())
         }
     }
+}
 
-    // MARK: Top-right controls
+/// The Library's top-right buttons, as in Photos: system glass buttons (iOS 26) in the dark
+/// appearance, over the header's dark band. The filter menu opens out of its button.
+/// In select mode: filter + ··· in one capsule, and ✕.
+private struct LibraryHeaderControls: View {
+    @Bindable var ui: LibraryUIState
+    let selectionMenu: () -> AnyView
 
-    @ViewBuilder
-    private var trailingControls: some View {
-        GlassGroup(spacing: 10) {
-            HStack(spacing: 10) {
+    var body: some View {
+        GlassGroup(spacing: 8) {
+            HStack(spacing: 8) {
                 if ui.isSelecting {
                     HStack(spacing: 0) {
-                        filterMenu.frame(width: 50, height: 48)
-                        selectionMenu().frame(width: 50, height: 48)
+                        filterMenu
+                        selectionMenu()
+                            .frame(width: 44, height: 44)
                     }
-                    .glassSurface(Capsule(), style: .dark)
+                    .padding(.horizontal, 2)
+                    .glassSurface(Capsule())
                     Button {
                         withAnimation(.snappy) { ui.endSelecting() }
                     } label: {
                         Image(systemName: "xmark")
-                            .font(.system(size: 19, weight: .medium))
-                            .frame(width: 48, height: 48)
+                            .font(.system(size: 17, weight: .medium))
+                            .frame(width: 30, height: 30)
                     }
-                    .buttonStyle(.plain)
-                    .glassSurface(Circle(), style: .dark)
+                    .headerGlassButton(.circle)
                     .accessibilityLabel("Done Selecting")
                 } else {
                     filterMenu
-                        .frame(width: 48, height: 48)
-                        .glassSurface(Circle(), style: .dark)
+                        .headerGlassButton(.circle)
                     Button {
                         withAnimation(.snappy) { ui.isSelecting = true }
                     } label: {
                         Text("Select")
-                            .font(.system(size: 17, weight: .semibold))
-                            .padding(.horizontal, 20)
-                            .frame(height: 48)
+                            .font(.system(size: 17, weight: .medium))
+                            .fixedSize()
+                            .padding(.horizontal, 4)
+                            .frame(height: 30)
                     }
-                    .buttonStyle(.plain)
-                    .glassSurface(Capsule(), style: .dark)
+                    .headerGlassButton(.capsule)
                 }
             }
         }
         .foregroundStyle(.white)
+        .environment(\.colorScheme, .dark)
     }
 
     private var filterMenu: some View {
@@ -126,11 +134,26 @@ struct LibraryHeader: View {
             LibraryFilterMenuContent(ui: ui)
         } label: {
             Image(systemName: ui.isFiltered ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease")
-                .font(.system(size: 19, weight: .medium))
-                .frame(width: 48, height: 48)
+                .font(.system(size: 17, weight: .medium))
+                .frame(width: 30, height: 30)
                 .contentShape(Rectangle())
         }
         .accessibilityLabel("Filter and Sort")
+    }
+}
+
+private extension View {
+    /// The system glass button (its own press squish, and menus morph out of it), 44 pt tall
+    /// like a navigation bar button; a material capsule before iOS 26.
+    @ViewBuilder
+    func headerGlassButton(_ shape: ButtonBorderShape) -> some View {
+        if #available(iOS 26.0, *) {
+            self.buttonStyle(.glass).buttonBorderShape(shape)
+        } else {
+            self.buttonStyle(.plain)
+                .padding(7)
+                .background(.ultraThinMaterial, in: Capsule())
+        }
     }
 }
 

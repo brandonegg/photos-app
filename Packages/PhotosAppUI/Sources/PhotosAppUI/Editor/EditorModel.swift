@@ -1,5 +1,7 @@
 import AVFoundation
+#if canImport(Cinematic)
 import Cinematic
+#endif
 import CloudCore
 import CoreImage
 import Core
@@ -133,10 +135,13 @@ final class EditorModel {
         videoSize = try? await VideoComposer.uprightSize(of: asset)
         player.replaceCurrentItem(with: AVPlayerItem(asset: asset))
         let box = AssetBox(asset: asset)
+        // Cinematic isn't in the Simulator SDK; there the Audio Mix tool just never appears.
+        #if canImport(Cinematic)
         if #available(iOS 26.0, *), CNAssetSpatialAudioInfo.isSupported {
             spatialAudio = await Self.loadSpatialAudio(box)?.info
             if spatialAudio != nil { tools.insert(.audioMix, at: 1) }
         }
+        #endif
         // A poster frame for filter thumbnails, and frames for the trim strip.
         let (poster, images) = await Self.frames(box, duration: duration)
         if let poster {
@@ -148,6 +153,7 @@ final class EditorModel {
         applyVideoPreview()
     }
 
+    #if canImport(Cinematic)
     @available(iOS 26.0, *)
     @concurrent
     private static func loadSpatialAudio(_ box: AssetBox) async -> InfoBox? {
@@ -158,6 +164,7 @@ final class EditorModel {
         guard has, let info = try? await CNAssetSpatialAudioInfo(asset: asset) else { return nil }
         return InfoBox(info: info)
     }
+    #endif
 
     @concurrent
     private static func frames(_ box: AssetBox, duration: Double) async -> (CGImage?, [CGImage]) {
@@ -256,9 +263,11 @@ final class EditorModel {
         } else {
             current.videoComposition = nil
         }
+        #if canImport(Cinematic)
         if #available(iOS 26.0, *), let spatialAudio = spatialAudio as? CNAssetSpatialAudioInfo {
             current.audioMix = spatialAudio.audioMix(effectIntensity: spatialAudio.defaultEffectIntensity, renderingStyle: state.audioMix.renderingStyle)
         }
+        #endif
         player.isMuted = state.muted
     }
 
@@ -320,6 +329,7 @@ struct AssetBox: @unchecked Sendable { let asset: AVAsset? }
 private struct InfoBox: @unchecked Sendable { let info: AnyObject }
 struct CompositionBox: @unchecked Sendable { let composition: AVVideoComposition }
 
+#if canImport(Cinematic)
 extension EditState.AudioMix {
     @available(iOS 26.0, *)
     var renderingStyle: CNSpatialAudioRenderingStyle {
@@ -331,6 +341,7 @@ extension EditState.AudioMix {
         }
     }
 }
+#endif
 
 extension CGImagePropertyOrientation {
     init(_ orientation: UIImage.Orientation) {

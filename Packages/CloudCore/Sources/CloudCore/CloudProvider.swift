@@ -11,7 +11,13 @@ public protocol CloudProvider: Sendable {
     var prober: any ServerProber { get }
 
     func serverInfo(at server: URL) async throws -> CloudServerInfo
+    /// Which ways of signing in the server offers. Works before signing in.
+    func loginOptions(at server: URL) async throws -> CloudLoginOptions
     func signIn(at server: URL, email: String, password: String) async throws -> CloudSignIn
+    /// Begins an OAuth sign-in: the page to show in a browser and what to expect back.
+    func startOAuth(at server: URL) async throws -> CloudOAuthRequest
+    /// Completes the sign-in with the URL the browser was redirected to.
+    func finishOAuth(_ request: CloudOAuthRequest, callbackURL: URL) async throws -> CloudSignIn
     /// Ends the server session for this token; failures are logged, not thrown.
     func signOut(at server: URL, token: String) async
     /// Everything the app does with one signed-in account on the active server.

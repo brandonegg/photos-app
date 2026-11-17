@@ -12,12 +12,15 @@ filter:
     - pingServer
     - getServerVersion
     - getAboutInfo
+    - getServerFeatures
     # Auth
     - login
     - logout
     - validateAccessToken
     - getMyUser
     - getAuthStatus
+    - startOAuth
+    - finishOAuth
     - setupPinCode
     - unlockAuthSession
     - lockAuthSession

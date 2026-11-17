@@ -175,6 +175,52 @@ public struct CloudSignIn: Sendable, Equatable {
     }
 }
 
+/// How a server lets people sign in, so the sign-in screen shows exactly what the server's own login page does.
+public struct CloudLoginOptions: Sendable, Hashable {
+    public let passwordLogin: Bool
+    /// Set when single sign-on (OAuth) is turned on.
+    public let oauth: OAuth?
+    /// Shown under the sign-in options; nil when the server has none.
+    public let message: String?
+
+    public struct OAuth: Sendable, Hashable {
+        /// The server's label for the button, e.g. "Login with PocketID".
+        public let buttonTitle: String
+        /// The server opens the OAuth sign-in straight away instead of its login page.
+        public let autoLaunch: Bool
+
+        public init(buttonTitle: String, autoLaunch: Bool) {
+            self.buttonTitle = buttonTitle
+            self.autoLaunch = autoLaunch
+        }
+    }
+
+    public init(passwordLogin: Bool, oauth: OAuth?, message: String?) {
+        self.passwordLogin = passwordLogin
+        self.oauth = oauth
+        self.message = message
+    }
+}
+
+/// An OAuth sign-in in progress: open `authorizeURL` in a web authentication session that
+/// finishes when it is redirected to `callbackScheme`, then pass the redirect to `finishOAuth`.
+public struct CloudOAuthRequest: Sendable, Equatable {
+    /// The address the sign-in started on; it must finish on the same one.
+    public let server: URL
+    public let authorizeURL: URL
+    public let callbackScheme: String
+    public let state: String
+    public let codeVerifier: String
+
+    public init(server: URL, authorizeURL: URL, callbackScheme: String, state: String, codeVerifier: String) {
+        self.server = server
+        self.authorizeURL = authorizeURL
+        self.callbackScheme = callbackScheme
+        self.state = state
+        self.codeVerifier = codeVerifier
+    }
+}
+
 public struct CloudServerInfo: Sendable, Equatable {
     public let version: String
     /// Set when the server's version differs from the one the provider was built for.

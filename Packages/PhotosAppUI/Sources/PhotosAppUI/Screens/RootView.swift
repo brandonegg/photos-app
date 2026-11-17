@@ -14,9 +14,7 @@ public struct RootView: View {
             if model.isSignedIn {
                 PhotosShell(model: model)
             } else {
-                NavigationStack {
-                    SignInView(model: model)
-                }
+                OnboardingView(model: model)
             }
         }
         .onAppear { model.start() }

@@ -160,6 +160,20 @@ public protocol APIProtocol: Sendable {
     /// - Remark: HTTP `GET /memories`.
     /// - Remark: Generated from `#/paths//memories/get(searchMemories)`.
     func searchMemories(_ input: Operations.SearchMemories.Input) async throws -> Operations.SearchMemories.Output
+    /// Start OAuth
+    ///
+    /// Initiate the OAuth authorization process.
+    ///
+    /// - Remark: HTTP `POST /oauth/authorize`.
+    /// - Remark: Generated from `#/paths//oauth/authorize/post(startOAuth)`.
+    func startOAuth(_ input: Operations.StartOAuth.Input) async throws -> Operations.StartOAuth.Output
+    /// Finish OAuth
+    ///
+    /// Complete the OAuth authorization process by exchanging the authorization code for a session token.
+    ///
+    /// - Remark: HTTP `POST /oauth/callback`.
+    /// - Remark: Generated from `#/paths//oauth/callback/post(finishOAuth)`.
+    func finishOAuth(_ input: Operations.FinishOAuth.Input) async throws -> Operations.FinishOAuth.Output
     /// Retrieve partners
     ///
     /// Retrieve a list of partners with whom assets are shared.
@@ -246,6 +260,14 @@ public protocol APIProtocol: Sendable {
     /// - Remark: Generated from `#/paths//server/config/get(getServerConfig)`.
     @available(*, deprecated)
     func getServerConfig(_ input: Operations.GetServerConfig.Input) async throws -> Operations.GetServerConfig.Output
+    /// Get features
+    ///
+    /// Retrieve available features supported by this server.
+    ///
+    /// - Remark: HTTP `GET /server/features`.
+    /// - Remark: Generated from `#/paths//server/features/get(getServerFeatures)`.
+    @available(*, deprecated)
+    func getServerFeatures(_ input: Operations.GetServerFeatures.Input) async throws -> Operations.GetServerFeatures.Output
     /// Ping
     ///
     /// Pong
@@ -640,6 +662,36 @@ extension APIProtocol {
             headers: headers
         ))
     }
+    /// Start OAuth
+    ///
+    /// Initiate the OAuth authorization process.
+    ///
+    /// - Remark: HTTP `POST /oauth/authorize`.
+    /// - Remark: Generated from `#/paths//oauth/authorize/post(startOAuth)`.
+    public func startOAuth(
+        headers: Operations.StartOAuth.Input.Headers = .init(),
+        body: Operations.StartOAuth.Input.Body
+    ) async throws -> Operations.StartOAuth.Output {
+        try await startOAuth(Operations.StartOAuth.Input(
+            headers: headers,
+            body: body
+        ))
+    }
+    /// Finish OAuth
+    ///
+    /// Complete the OAuth authorization process by exchanging the authorization code for a session token.
+    ///
+    /// - Remark: HTTP `POST /oauth/callback`.
+    /// - Remark: Generated from `#/paths//oauth/callback/post(finishOAuth)`.
+    public func finishOAuth(
+        headers: Operations.FinishOAuth.Input.Headers = .init(),
+        body: Operations.FinishOAuth.Input.Body
+    ) async throws -> Operations.FinishOAuth.Output {
+        try await finishOAuth(Operations.FinishOAuth.Input(
+            headers: headers,
+            body: body
+        ))
+    }
     /// Retrieve partners
     ///
     /// Retrieve a list of partners with whom assets are shared.
@@ -809,6 +861,16 @@ extension APIProtocol {
     @available(*, deprecated)
     public func getServerConfig(headers: Operations.GetServerConfig.Input.Headers = .init()) async throws -> Operations.GetServerConfig.Output {
         try await getServerConfig(Operations.GetServerConfig.Input(headers: headers))
+    }
+    /// Get features
+    ///
+    /// Retrieve available features supported by this server.
+    ///
+    /// - Remark: HTTP `GET /server/features`.
+    /// - Remark: Generated from `#/paths//server/features/get(getServerFeatures)`.
+    @available(*, deprecated)
+    public func getServerFeatures(headers: Operations.GetServerFeatures.Input.Headers = .init()) async throws -> Operations.GetServerFeatures.Output {
+        try await getServerFeatures(Operations.GetServerFeatures.Input(headers: headers))
     }
     /// Ping
     ///

@@ -359,9 +359,9 @@ final class ViewerViewController: UIViewController {
 
     // MARK: Spatial scene
 
-    /// Photos only, and only in builds that carry the depth model.
+    /// Photos only, and only in builds that carry a scene model (SHARP or the depth model).
     private var canShowSpatial: Bool {
-        guard DepthEstimator.isAvailable, let item = currentItem else { return false }
+        guard DepthEstimator.isAvailable || GaussianPredictor.isAvailable, let item = currentItem else { return false }
         return !item.isVideo
     }
 
@@ -674,7 +674,9 @@ final class ViewerViewController: UIViewController {
         if isBeingDismissed || presentingViewController == nil {
             // The depth model and the scenes made here take memory the Library doesn't need.
             SpatialSceneCache.removeAll()
+            GaussianCloudCache.removeAll()
             Task { await DepthEstimator.shared.unload() }
+            Task { await GaussianPredictor.shared.unload() }
             airPlayPhotos.stop()
             ExternalDisplay.shared.clear()
         }

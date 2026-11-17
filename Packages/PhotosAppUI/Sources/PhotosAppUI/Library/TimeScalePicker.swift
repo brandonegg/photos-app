@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// Years | Months | All for the Library. On iOS 26.1 and later it sits in the tab bar's
-/// bottom accessory; earlier, it floats as a glass capsule above the tab bar.
+/// Years | Months | All for the Library, in the middle of `TimeScaleRow`.
 ///
 /// Like Photos, the segments sit straight on the glass (no track of their own), with a soft
 /// capsule sliding behind the selected one. VoiceOver sees a standard segmented picker.
@@ -48,15 +47,50 @@ struct TimeScalePicker: View {
     }
 }
 
-/// The picker on its own glass capsule, for where there's no bottom accessory.
-struct FloatingTimeScalePicker: View {
+/// The Library's bottom row while browsing back in time, in place of the tab bar: the
+/// Library button, Years | Months | All, and Search, laid out like iOS's minimized tab bar.
+/// Tapping Library brings back the full tab bar (Library | Collections), as in Photos.
+struct TimeScaleRow: View {
     @Bindable var ui: LibraryUIState
 
     var body: some View {
-        TimeScalePicker(ui: ui)
-            .frame(width: 270, height: 48)
-            .glassSurface(Capsule())
+        HStack(spacing: 14) {
+            Button {
+                withAnimation(.smooth(duration: 0.35)) { ui.showTabBar() }
+            } label: {
+                Image(systemName: "photo.on.rectangle.angled")
+                    .font(.system(size: 21, weight: .medium))
+                    .foregroundStyle(.tint)
+                    .frame(width: Self.height, height: Self.height)
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .glassSurface(Circle())
+            .accessibilityLabel("Library")
+            .accessibilityHint("Shows the tab bar")
+
+            TimeScalePicker(ui: ui)
+                .frame(height: Self.height)
+                .glassSurface(Capsule())
+
+            Button {
+                ui.section = .search
+            } label: {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 21, weight: .medium))
+                    .foregroundStyle(.primary)
+                    .frame(width: Self.height, height: Self.height)
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .glassSurface(Circle())
+            .accessibilityLabel("Search")
+        }
+        .padding(.horizontal, 28)
     }
+
+    /// The minimized tab bar's height.
+    static let height: CGFloat = 48
 }
 
 extension TimeScale {

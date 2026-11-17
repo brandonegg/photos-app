@@ -3,8 +3,8 @@ import Persistence
 import SwiftUI
 
 /// The signed-in app: the system tab bar (Library, Collections, and Search as its own
-/// round tab), the Library's Years | Months | All after scrolling, and select mode's footer
-/// in place of the tab bar.
+/// round tab), and in its place in the Library, the time scale row while browsing back in
+/// time and select mode's footer.
 struct PhotosShell: View {
     let model: AppModel
     @State private var ui = LibraryUIState()
@@ -65,7 +65,7 @@ struct PhotosShell: View {
             Tab("Library", systemImage: "photo.on.rectangle.angled", value: AppSection.library) {
                 LibraryScreen(model: model, session: session, ui: ui)
                     .overlay(alignment: .bottom) { libraryBottom }
-                    .toolbar(ui.isSelecting ? .hidden : .automatic, for: .tabBar)
+                    .toolbar(ui.isSelecting || ui.showsTimeScaleRow ? .hidden : .automatic, for: .tabBar)
             }
             Tab("Collections", systemImage: "rectangle.stack.fill", value: AppSection.collections) {
                 CollectionsScreen(model: model, session: session, ui: ui)
@@ -78,24 +78,30 @@ struct PhotosShell: View {
         .modifier(TabBarBehavior(ui: ui))
     }
 
-    /// The toast, and select mode's footer (the tab bar hides) or, without a bottom
-    /// accessory, the floating Years | Months | All.
+    /// The toast, and in place of the tab bar (hidden meanwhile) select mode's footer or
+    /// the time scale row.
     private var libraryBottom: some View {
         VStack(spacing: 12) {
             toast
             if ui.isSelecting {
                 SelectionFooter(ui: ui) { ui.shareRequested = true }
                     .transition(.move(edge: .bottom).combined(with: .opacity))
-            } else if ui.barMode == .timeScale && !TabBarBehavior.hasAccessory {
-                FloatingTimeScalePicker(ui: ui)
-                    .transition(.scale(scale: 0.9).combined(with: .opacity))
+            } else if ui.showsTimeScaleRow {
+                TimeScaleRow(ui: ui)
+                    .transition(.scale(scale: 0.9, anchor: .bottom).combined(with: .opacity))
             }
         }
-        .padding(.bottom, ui.isSelecting ? 0 : 12)
-        // The footer sits at the screen's edge, where the tab bar was.
-        .ignoresSafeArea(.container, edges: ui.isSelecting ? .bottom : [])
+        .padding(.bottom, bottomGap)
+        // The footer and the row sit where the tab bar was, over the home indicator's margin.
+        .ignoresSafeArea(.container, edges: ui.isSelecting || ui.showsTimeScaleRow ? .bottom : [])
         .animation(.snappy, value: ui.isSelecting)
-        .animation(.smooth(duration: 0.35), value: ui.barMode)
+        .animation(.smooth(duration: 0.35), value: ui.showsTimeScaleRow)
+    }
+
+    /// The footer at the screen's edge; the row where iOS puts the minimized tab bar.
+    private var bottomGap: CGFloat {
+        if ui.isSelecting { return 0 }
+        return ui.showsTimeScaleRow ? 27 : 12
     }
 
     private var toast: some View {
@@ -188,59 +194,20 @@ struct PhotosShell: View {
     }
 }
 
-/// iOS 26's tab bar: it shrinks while the Library or Collections scroll, and on iOS 26.1
-/// and later the Library's Years | Months | All rides in its bottom accessory.
+/// iOS 26's tab bar. In the Library it stays full width (Library | Collections and Search)
+/// and steps aside for the app's time scale row while browsing, so iOS never shows its
+/// minimized bar there, nor a bottom accessory stacked above the full one. Collections
+/// minimizes it on scrolling down, as usual.
 private struct TabBarBehavior: ViewModifier {
-    @Bindable var ui: LibraryUIState
-
-    static var hasAccessory: Bool {
-        if #available(iOS 26.1, *) { true } else { false }
-    }
-
-    private var showsAccessory: Bool {
-        ui.section == .library && ui.barMode == .timeScale && !ui.isSelecting && !ui.isTimeScaleDismissed
-    }
+    let ui: LibraryUIState
 
     func body(content: Content) -> some View {
-        if #available(iOS 26.1, *) {
+        if #available(iOS 26.0, *) {
             content
-                .tabBarMinimizeBehavior(minimizeBehavior)
-                .tabViewSearchActivation(.searchTabSelection)
-                .tabViewBottomAccessory(isEnabled: showsAccessory) {
-                    TimeScaleAccessory(ui: ui)
-                }
-        } else if #available(iOS 26.0, *) {
-            content
-                .tabBarMinimizeBehavior(minimizeBehavior)
+                .tabBarMinimizeBehavior(ui.section == .library ? .never : .onScrollDown)
                 .tabViewSearchActivation(.searchTabSelection)
         } else {
             content
         }
-    }
-
-    /// The Library starts at the newest photos at the bottom, so browsing back in time
-    /// scrolls up; elsewhere, the usual scrolling down. Briefly `.never` on arriving at the
-    /// newest photos, which expands a minimized bar (see `LibraryUIState.expandsTabBar`).
-    @available(iOS 26.0, *)
-    private var minimizeBehavior: TabBarMinimizeBehavior {
-        guard ui.section == .library else { return .onScrollDown }
-        return ui.expandsTabBar ? .never : .onScrollUp
-    }
-}
-
-/// The bottom accessory: Years | Months | All, a little narrower beside the minimized tab bar.
-/// Tapping the minimized tab bar expands it to Library | Collections alone, as in Photos: the
-/// accessory steps aside until the grid is scrolled back again.
-@available(iOS 26.0, *)
-private struct TimeScaleAccessory: View {
-    @Bindable var ui: LibraryUIState
-    @Environment(\.tabViewBottomAccessoryPlacement) private var placement
-
-    var body: some View {
-        TimeScalePicker(ui: ui)
-            .padding(.horizontal, placement == .inline ? 0 : 4)
-            .onChange(of: placement) { old, new in
-                if old == .inline, new == .expanded { ui.tabBarExpanded() }
-            }
     }
 }

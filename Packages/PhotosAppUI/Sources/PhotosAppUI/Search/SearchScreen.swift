@@ -27,6 +27,13 @@ struct SearchScreen: View {
     @FocusState private var fieldFocused: Bool
     /// The bottom safe area (tab bar, or keyboard), cleared by the results grid.
     @State private var safeBottom: CGFloat = 0
+    @State private var keyboardShown = false
+
+    /// On iOS 26 the search field floats just above the keyboard, but isn't part of the safe
+    /// area, so content laid out to the keyboard's top would sit under it. This clears it.
+    private var fieldClearance: CGFloat {
+        if #available(iOS 26.0, *), keyboardShown { 58 } else { 0 }
+    }
 
     private enum Route: Hashable {
         case viewed, shared
@@ -59,6 +66,8 @@ struct SearchScreen: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .background { Color(.systemBackground).ignoresSafeArea() }
             .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.bottom } action: { safeBottom = $0 }
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in keyboardShown = true }
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in keyboardShown = false }
             .navigationTitle("Search")
             .searchable(text: $text, placement: Self.fieldPlacement, prompt: Text("Search your library…"))
             .searchFocused($fieldFocused)
@@ -120,6 +129,7 @@ struct SearchScreen: View {
             .scrollDismissesKeyboard(.interactively)
             .scrollIndicators(.hidden)
         }
+        .safeAreaPadding(.bottom, fieldClearance)
     }
 
     private var homeContent: some View {
@@ -261,7 +271,7 @@ struct SearchScreen: View {
                 PhotoGridView(
                     snapshot: TimelineSnapshot(items: results, version: searchedText.hashValue &+ smartResults.count, isLoaded: true),
                     session: session, columns: $columns,
-                    insets: UIEdgeInsets(top: 0, left: 0, bottom: safeBottom + 12, right: 0),
+                    insets: UIEdgeInsets(top: 0, left: 0, bottom: safeBottom + fieldClearance + 12, right: 0),
                     opensAtTop: true
                 )
                 .ignoresSafeArea(edges: .bottom)

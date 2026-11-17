@@ -2,7 +2,7 @@
 
 How Photos is built, and why. The README covers what the app does and how to install it.
 
-Photos is a native iOS client for a self-hosted [Immich](https://immich.app) server (v3.3.5). It is
+Photos is a native iOS client for a self-hosted [Immich](https://immich.app) server (v3.4.1). It is
 written so that small servers (a Raspberry Pi 4 with 2 GB is the reference) stay responsive, and so
 that it can run side by side with the official Immich app without uploading anything twice.
 
@@ -10,8 +10,8 @@ that it can run side by side with the official Immich app without uploading anyt
 
 - **`/sync/stream` has an untyped response.** It returns JSON Lines, but the spec declares no body.
   The event payloads (`SyncAssetV2`, `SyncAssetExifV1`, …) are in the spec, so they can be generated.
-- **`PUT /assets` is deprecated** in v3; its `PATCH` replacement is hidden from the spec. Both reach the
-  same handler on 3.3.5.
+- **`PUT /assets` is on its way out**: since v3 the same handler also takes `PATCH`, which is hidden from
+  the spec; Immich plans to drop `PUT` in v5. (3.3.5 marked `PUT` deprecated; 3.4.1 no longer does.)
 - **Metadata search** uses the structured `filter` form and cursor paging (the flat filters are deprecated).
 - **`/timeline/*` is internal** (the web app's private API) and isn't used: the timeline comes from a
   local database fed by the sync stream.

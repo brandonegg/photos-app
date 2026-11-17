@@ -4283,6 +4283,10 @@ extension Components {
         }
         /// - Remark: Generated from `#/components/schemas/ServerFeaturesDto`.
         public struct ServerFeaturesDto: Codable, Hashable, Sendable {
+            /// Whether the backups feature is enabled
+            ///
+            /// - Remark: Generated from `#/components/schemas/ServerFeaturesDto/backups`.
+            public var backups: Swift.Bool?
             /// Whether config file is available
             ///
             /// - Remark: Generated from `#/components/schemas/ServerFeaturesDto/configFile`.
@@ -4350,6 +4354,7 @@ extension Components {
             /// Creates a new `ServerFeaturesDto`.
             ///
             /// - Parameters:
+            ///   - backups: Whether the backups feature is enabled
             ///   - configFile: Whether config file is available
             ///   - duplicateDetection: Whether duplicate detection is enabled
             ///   - email: Whether email notifications are enabled
@@ -4367,6 +4372,7 @@ extension Components {
             ///   - smartSearch: Whether smart search is enabled
             ///   - trash: Whether trash feature is enabled
             public init(
+                backups: Swift.Bool? = nil,
                 configFile: Swift.Bool,
                 duplicateDetection: Swift.Bool,
                 email: Swift.Bool,
@@ -4384,6 +4390,7 @@ extension Components {
                 smartSearch: Swift.Bool,
                 trash: Swift.Bool
             ) {
+                self.backups = backups
                 self.configFile = configFile
                 self.duplicateDetection = duplicateDetection
                 self.email = email
@@ -4402,6 +4409,7 @@ extension Components {
                 self.trash = trash
             }
             public enum CodingKeys: String, CodingKey {
+                case backups
                 case configFile
                 case duplicateDetection
                 case email
@@ -4437,6 +4445,10 @@ extension Components {
         }
         /// - Remark: Generated from `#/components/schemas/ServerVersionResponseDto`.
         public struct ServerVersionResponseDto: Codable, Hashable, Sendable {
+            /// Highest feature level supported by the server, which increments independently of the release version
+            ///
+            /// - Remark: Generated from `#/components/schemas/ServerVersionResponseDto/featureLevel`.
+            public var featureLevel: Swift.Int?
             /// Major version number
             ///
             /// - Remark: Generated from `#/components/schemas/ServerVersionResponseDto/major`.
@@ -4456,22 +4468,26 @@ extension Components {
             /// Creates a new `ServerVersionResponseDto`.
             ///
             /// - Parameters:
+            ///   - featureLevel: Highest feature level supported by the server, which increments independently of the release version
             ///   - major: Major version number
             ///   - minor: Minor version number
             ///   - patch: Patch version number
             ///   - prerelease: Pre-release version number
             public init(
+                featureLevel: Swift.Int? = nil,
                 major: Swift.Int,
                 minor: Swift.Int,
                 patch: Swift.Int,
                 prerelease: Swift.Int? = nil
             ) {
+                self.featureLevel = featureLevel
                 self.major = major
                 self.minor = minor
                 self.patch = patch
                 self.prerelease = prerelease
             }
             public enum CodingKeys: String, CodingKey {
+                case featureLevel
                 case major
                 case minor
                 case patch

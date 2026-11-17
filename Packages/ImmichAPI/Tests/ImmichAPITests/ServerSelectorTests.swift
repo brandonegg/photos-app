@@ -39,10 +39,32 @@ import Testing
 
 @Suite struct VersionCheckTests {
     @Test func classifiesVersions() {
-        #expect(VersionCheck(server: ServerVersion(major: 3, minor: 3, patch: 5)) == .matches)
-        #expect(VersionCheck(server: ServerVersion(major: 3, minor: 4, patch: 0)).warning?.contains("newer") == true)
-        #expect(VersionCheck(server: ServerVersion(major: 3, minor: 3, patch: 4)).warning?.contains("older") == true)
+        #expect(VersionCheck(server: ServerVersion(major: 3, minor: 4, patch: 1)) == .matches)
+        #expect(VersionCheck(server: ServerVersion(major: 3, minor: 5, patch: 0)).warning?.contains("newer") == true)
+        #expect(VersionCheck(server: ServerVersion(major: 3, minor: 4, patch: 0)).warning?.contains("older") == true)
         #expect(ServerVersion(major: 3, minor: 10, patch: 0) > ServerVersion(major: 3, minor: 9, patch: 9))
+    }
+
+    /// 3.3.x servers send neither `featureLevel` nor `backups`; prepare-spec.py keeps them optional.
+    @Test func decodesPreSignInResponsesFromOlderServers() throws {
+        let version = try JSONDecoder().decode(
+            Components.Schemas.ServerVersionResponseDto.self,
+            from: Data(#"{"major":3,"minor":3,"patch":5}"#.utf8)
+        )
+        #expect(version.minor == 3)
+        #expect(version.featureLevel == nil)
+
+        let features = try JSONDecoder().decode(
+            Components.Schemas.ServerFeaturesDto.self,
+            from: Data(#"""
+            {"configFile":false,"duplicateDetection":true,"email":false,"facialRecognition":true,
+             "importFaces":false,"map":true,"oauth":true,"oauthAutoLaunch":false,"ocr":true,
+             "passwordLogin":true,"realtimeTranscoding":false,"reverseGeocoding":true,"search":true,
+             "sidecar":true,"smartSearch":true,"trash":true}
+            """#.utf8)
+        )
+        #expect(features.oauth)
+        #expect(features.backups == nil)
     }
 
     @Test func parsesImmichDates() {

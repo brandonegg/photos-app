@@ -209,6 +209,8 @@ struct PhotoGridView: UIViewControllerRepresentable {
     var takesCommands: Bool?
     /// Text centred at the bottom of each tile (Recently Deleted's days left).
     var caption: ((TimelineItem) -> TileCaption?)?
+    /// Reads top to bottom from the first item (Search) instead of opening at the newest, at the bottom.
+    var opensAtTop = false
     @AppStorage(PhotosSettings.showTileStatus) private var showsStatus = true
 
     func makeUIViewController(context: Context) -> PhotoGridViewController {
@@ -216,6 +218,7 @@ struct PhotoGridView: UIViewControllerRepresentable {
         controller.phoneImages = session.phoneImages
         controller.showsStatus = showsStatus && mode == .library
         controller.caption = caption
+        controller.opensAtTop = opensAtTop
         controller.onColumnsChanged = { newValue in columns = newValue }
         let mode = mode
         let album = album

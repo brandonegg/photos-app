@@ -261,7 +261,8 @@ struct SearchScreen: View {
                 PhotoGridView(
                     snapshot: TimelineSnapshot(items: results, version: searchedText.hashValue &+ smartResults.count, isLoaded: true),
                     session: session, columns: $columns,
-                    insets: UIEdgeInsets(top: 0, left: 0, bottom: safeBottom + 12, right: 0)
+                    insets: UIEdgeInsets(top: 0, left: 0, bottom: safeBottom + 12, right: 0),
+                    opensAtTop: true
                 )
                 .ignoresSafeArea(edges: .bottom)
             }

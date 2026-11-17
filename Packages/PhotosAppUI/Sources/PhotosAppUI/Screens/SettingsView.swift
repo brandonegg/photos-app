@@ -39,7 +39,7 @@ struct AppSettingsSections: View {
         }
         .sheet(isPresented: $addingAccount) {
             NavigationStack {
-                SignInView(model: model, initialEmail: model.session?.needsSignIn == true ? model.accounts.activeAccount?.email ?? "" : "") {
+                SignInLoader(model: model, initialEmail: model.session?.needsSignIn == true ? model.accounts.activeAccount?.email ?? "" : "") {
                     addingAccount = false
                 }
                 .toolbar {

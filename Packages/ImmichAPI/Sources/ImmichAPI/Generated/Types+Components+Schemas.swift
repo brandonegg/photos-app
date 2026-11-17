@@ -2504,6 +2504,93 @@ extension Components {
                 case notIn
             }
         }
+        /// - Remark: Generated from `#/components/schemas/OAuthAuthorizeResponseDto`.
+        public struct OAuthAuthorizeResponseDto: Codable, Hashable, Sendable {
+            /// OAuth authorization URL
+            ///
+            /// - Remark: Generated from `#/components/schemas/OAuthAuthorizeResponseDto/url`.
+            public var url: Swift.String
+            /// Creates a new `OAuthAuthorizeResponseDto`.
+            ///
+            /// - Parameters:
+            ///   - url: OAuth authorization URL
+            public init(url: Swift.String) {
+                self.url = url
+            }
+            public enum CodingKeys: String, CodingKey {
+                case url
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/OAuthCallbackDto`.
+        public struct OAuthCallbackDto: Codable, Hashable, Sendable {
+            /// OAuth code verifier (PKCE)
+            ///
+            /// - Remark: Generated from `#/components/schemas/OAuthCallbackDto/codeVerifier`.
+            public var codeVerifier: Swift.String?
+            /// OAuth state parameter
+            ///
+            /// - Remark: Generated from `#/components/schemas/OAuthCallbackDto/state`.
+            public var state: Swift.String?
+            /// OAuth callback URL
+            ///
+            /// - Remark: Generated from `#/components/schemas/OAuthCallbackDto/url`.
+            public var url: Swift.String
+            /// Creates a new `OAuthCallbackDto`.
+            ///
+            /// - Parameters:
+            ///   - codeVerifier: OAuth code verifier (PKCE)
+            ///   - state: OAuth state parameter
+            ///   - url: OAuth callback URL
+            public init(
+                codeVerifier: Swift.String? = nil,
+                state: Swift.String? = nil,
+                url: Swift.String
+            ) {
+                self.codeVerifier = codeVerifier
+                self.state = state
+                self.url = url
+            }
+            public enum CodingKeys: String, CodingKey {
+                case codeVerifier
+                case state
+                case url
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/OAuthConfigDto`.
+        public struct OAuthConfigDto: Codable, Hashable, Sendable {
+            /// OAuth code challenge (PKCE)
+            ///
+            /// - Remark: Generated from `#/components/schemas/OAuthConfigDto/codeChallenge`.
+            public var codeChallenge: Swift.String?
+            /// OAuth redirect URI
+            ///
+            /// - Remark: Generated from `#/components/schemas/OAuthConfigDto/redirectUri`.
+            public var redirectUri: Swift.String
+            /// OAuth state parameter
+            ///
+            /// - Remark: Generated from `#/components/schemas/OAuthConfigDto/state`.
+            public var state: Swift.String?
+            /// Creates a new `OAuthConfigDto`.
+            ///
+            /// - Parameters:
+            ///   - codeChallenge: OAuth code challenge (PKCE)
+            ///   - redirectUri: OAuth redirect URI
+            ///   - state: OAuth state parameter
+            public init(
+                codeChallenge: Swift.String? = nil,
+                redirectUri: Swift.String,
+                state: Swift.String? = nil
+            ) {
+                self.codeChallenge = codeChallenge
+                self.redirectUri = redirectUri
+                self.state = state
+            }
+            public enum CodingKeys: String, CodingKey {
+                case codeChallenge
+                case redirectUri
+                case state
+            }
+        }
         /// - Remark: Generated from `#/components/schemas/PartnerCreateDto`.
         public struct PartnerCreateDto: Codable, Hashable, Sendable {
             /// User ID to share with
@@ -4192,6 +4279,145 @@ extension Components {
                 case publicUsers
                 case trashDays
                 case userDeleteDelay
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/ServerFeaturesDto`.
+        public struct ServerFeaturesDto: Codable, Hashable, Sendable {
+            /// Whether config file is available
+            ///
+            /// - Remark: Generated from `#/components/schemas/ServerFeaturesDto/configFile`.
+            public var configFile: Swift.Bool
+            /// Whether duplicate detection is enabled
+            ///
+            /// - Remark: Generated from `#/components/schemas/ServerFeaturesDto/duplicateDetection`.
+            public var duplicateDetection: Swift.Bool
+            /// Whether email notifications are enabled
+            ///
+            /// - Remark: Generated from `#/components/schemas/ServerFeaturesDto/email`.
+            public var email: Swift.Bool
+            /// Whether facial recognition is enabled
+            ///
+            /// - Remark: Generated from `#/components/schemas/ServerFeaturesDto/facialRecognition`.
+            public var facialRecognition: Swift.Bool
+            /// Whether face import is enabled
+            ///
+            /// - Remark: Generated from `#/components/schemas/ServerFeaturesDto/importFaces`.
+            public var importFaces: Swift.Bool
+            /// Whether map feature is enabled
+            ///
+            /// - Remark: Generated from `#/components/schemas/ServerFeaturesDto/map`.
+            public var map: Swift.Bool
+            /// Whether OAuth is enabled
+            ///
+            /// - Remark: Generated from `#/components/schemas/ServerFeaturesDto/oauth`.
+            public var oauth: Swift.Bool
+            /// Whether OAuth auto-launch is enabled
+            ///
+            /// - Remark: Generated from `#/components/schemas/ServerFeaturesDto/oauthAutoLaunch`.
+            public var oauthAutoLaunch: Swift.Bool
+            /// Whether OCR is enabled
+            ///
+            /// - Remark: Generated from `#/components/schemas/ServerFeaturesDto/ocr`.
+            public var ocr: Swift.Bool
+            /// Whether password login is enabled
+            ///
+            /// - Remark: Generated from `#/components/schemas/ServerFeaturesDto/passwordLogin`.
+            public var passwordLogin: Swift.Bool
+            /// Whether real-time transcoding is enabled
+            ///
+            /// - Remark: Generated from `#/components/schemas/ServerFeaturesDto/realtimeTranscoding`.
+            public var realtimeTranscoding: Swift.Bool
+            /// Whether reverse geocoding is enabled
+            ///
+            /// - Remark: Generated from `#/components/schemas/ServerFeaturesDto/reverseGeocoding`.
+            public var reverseGeocoding: Swift.Bool
+            /// Whether search is enabled
+            ///
+            /// - Remark: Generated from `#/components/schemas/ServerFeaturesDto/search`.
+            public var search: Swift.Bool
+            /// Whether sidecar files are supported
+            ///
+            /// - Remark: Generated from `#/components/schemas/ServerFeaturesDto/sidecar`.
+            public var sidecar: Swift.Bool
+            /// Whether smart search is enabled
+            ///
+            /// - Remark: Generated from `#/components/schemas/ServerFeaturesDto/smartSearch`.
+            public var smartSearch: Swift.Bool
+            /// Whether trash feature is enabled
+            ///
+            /// - Remark: Generated from `#/components/schemas/ServerFeaturesDto/trash`.
+            public var trash: Swift.Bool
+            /// Creates a new `ServerFeaturesDto`.
+            ///
+            /// - Parameters:
+            ///   - configFile: Whether config file is available
+            ///   - duplicateDetection: Whether duplicate detection is enabled
+            ///   - email: Whether email notifications are enabled
+            ///   - facialRecognition: Whether facial recognition is enabled
+            ///   - importFaces: Whether face import is enabled
+            ///   - map: Whether map feature is enabled
+            ///   - oauth: Whether OAuth is enabled
+            ///   - oauthAutoLaunch: Whether OAuth auto-launch is enabled
+            ///   - ocr: Whether OCR is enabled
+            ///   - passwordLogin: Whether password login is enabled
+            ///   - realtimeTranscoding: Whether real-time transcoding is enabled
+            ///   - reverseGeocoding: Whether reverse geocoding is enabled
+            ///   - search: Whether search is enabled
+            ///   - sidecar: Whether sidecar files are supported
+            ///   - smartSearch: Whether smart search is enabled
+            ///   - trash: Whether trash feature is enabled
+            public init(
+                configFile: Swift.Bool,
+                duplicateDetection: Swift.Bool,
+                email: Swift.Bool,
+                facialRecognition: Swift.Bool,
+                importFaces: Swift.Bool,
+                map: Swift.Bool,
+                oauth: Swift.Bool,
+                oauthAutoLaunch: Swift.Bool,
+                ocr: Swift.Bool,
+                passwordLogin: Swift.Bool,
+                realtimeTranscoding: Swift.Bool,
+                reverseGeocoding: Swift.Bool,
+                search: Swift.Bool,
+                sidecar: Swift.Bool,
+                smartSearch: Swift.Bool,
+                trash: Swift.Bool
+            ) {
+                self.configFile = configFile
+                self.duplicateDetection = duplicateDetection
+                self.email = email
+                self.facialRecognition = facialRecognition
+                self.importFaces = importFaces
+                self.map = map
+                self.oauth = oauth
+                self.oauthAutoLaunch = oauthAutoLaunch
+                self.ocr = ocr
+                self.passwordLogin = passwordLogin
+                self.realtimeTranscoding = realtimeTranscoding
+                self.reverseGeocoding = reverseGeocoding
+                self.search = search
+                self.sidecar = sidecar
+                self.smartSearch = smartSearch
+                self.trash = trash
+            }
+            public enum CodingKeys: String, CodingKey {
+                case configFile
+                case duplicateDetection
+                case email
+                case facialRecognition
+                case importFaces
+                case map
+                case oauth
+                case oauthAutoLaunch
+                case ocr
+                case passwordLogin
+                case realtimeTranscoding
+                case reverseGeocoding
+                case search
+                case sidecar
+                case smartSearch
+                case trash
             }
         }
         /// - Remark: Generated from `#/components/schemas/ServerPingResponse`.

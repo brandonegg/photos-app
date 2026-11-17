@@ -1796,6 +1796,148 @@ public struct Client: APIProtocol {
             }
         )
     }
+    /// Start OAuth
+    ///
+    /// Initiate the OAuth authorization process.
+    ///
+    /// - Remark: HTTP `POST /oauth/authorize`.
+    /// - Remark: Generated from `#/paths//oauth/authorize/post(startOAuth)`.
+    public func startOAuth(_ input: Operations.StartOAuth.Input) async throws -> Operations.StartOAuth.Output {
+        try await client.send(
+            input: input,
+            forOperation: Operations.StartOAuth.id,
+            serializer: { input in
+                let path = try converter.renderedPath(
+                    template: "/oauth/authorize",
+                    parameters: []
+                )
+                var request: HTTPTypes.HTTPRequest = .init(
+                    soar_path: path,
+                    method: .post
+                )
+                suppressMutabilityWarning(&request)
+                converter.setAcceptHeader(
+                    in: &request.headerFields,
+                    contentTypes: input.headers.accept
+                )
+                let body: OpenAPIRuntime.HTTPBody?
+                switch input.body {
+                case let .json(value):
+                    body = try converter.setRequiredRequestBodyAsJSON(
+                        value,
+                        headerFields: &request.headerFields,
+                        contentType: "application/json; charset=utf-8"
+                    )
+                }
+                return (request, body)
+            },
+            deserializer: { response, responseBody in
+                switch response.status.code {
+                case 201:
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.StartOAuth.Output.Created.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            Components.Schemas.OAuthAuthorizeResponseDto.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .created(.init(body: body))
+                default:
+                    return .undocumented(
+                        statusCode: response.status.code,
+                        .init(
+                            headerFields: response.headerFields,
+                            body: responseBody
+                        )
+                    )
+                }
+            }
+        )
+    }
+    /// Finish OAuth
+    ///
+    /// Complete the OAuth authorization process by exchanging the authorization code for a session token.
+    ///
+    /// - Remark: HTTP `POST /oauth/callback`.
+    /// - Remark: Generated from `#/paths//oauth/callback/post(finishOAuth)`.
+    public func finishOAuth(_ input: Operations.FinishOAuth.Input) async throws -> Operations.FinishOAuth.Output {
+        try await client.send(
+            input: input,
+            forOperation: Operations.FinishOAuth.id,
+            serializer: { input in
+                let path = try converter.renderedPath(
+                    template: "/oauth/callback",
+                    parameters: []
+                )
+                var request: HTTPTypes.HTTPRequest = .init(
+                    soar_path: path,
+                    method: .post
+                )
+                suppressMutabilityWarning(&request)
+                converter.setAcceptHeader(
+                    in: &request.headerFields,
+                    contentTypes: input.headers.accept
+                )
+                let body: OpenAPIRuntime.HTTPBody?
+                switch input.body {
+                case let .json(value):
+                    body = try converter.setRequiredRequestBodyAsJSON(
+                        value,
+                        headerFields: &request.headerFields,
+                        contentType: "application/json; charset=utf-8"
+                    )
+                }
+                return (request, body)
+            },
+            deserializer: { response, responseBody in
+                switch response.status.code {
+                case 201:
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.FinishOAuth.Output.Created.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            Components.Schemas.LoginResponseDto.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .created(.init(body: body))
+                default:
+                    return .undocumented(
+                        statusCode: response.status.code,
+                        .init(
+                            headerFields: response.headerFields,
+                            body: responseBody
+                        )
+                    )
+                }
+            }
+        )
+    }
     /// Retrieve partners
     ///
     /// Retrieve a list of partners with whom assets are shared.
@@ -2690,6 +2832,69 @@ public struct Client: APIProtocol {
                     case "application/json":
                         body = try await converter.getResponseBodyAsJSON(
                             Components.Schemas.ServerConfigDto.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .ok(.init(body: body))
+                default:
+                    return .undocumented(
+                        statusCode: response.status.code,
+                        .init(
+                            headerFields: response.headerFields,
+                            body: responseBody
+                        )
+                    )
+                }
+            }
+        )
+    }
+    /// Get features
+    ///
+    /// Retrieve available features supported by this server.
+    ///
+    /// - Remark: HTTP `GET /server/features`.
+    /// - Remark: Generated from `#/paths//server/features/get(getServerFeatures)`.
+    @available(*, deprecated)
+    public func getServerFeatures(_ input: Operations.GetServerFeatures.Input) async throws -> Operations.GetServerFeatures.Output {
+        try await client.send(
+            input: input,
+            forOperation: Operations.GetServerFeatures.id,
+            serializer: { input in
+                let path = try converter.renderedPath(
+                    template: "/server/features",
+                    parameters: []
+                )
+                var request: HTTPTypes.HTTPRequest = .init(
+                    soar_path: path,
+                    method: .get
+                )
+                suppressMutabilityWarning(&request)
+                converter.setAcceptHeader(
+                    in: &request.headerFields,
+                    contentTypes: input.headers.accept
+                )
+                return (request, nil)
+            },
+            deserializer: { response, responseBody in
+                switch response.status.code {
+                case 200:
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.GetServerFeatures.Output.Ok.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            Components.Schemas.ServerFeaturesDto.self,
                             from: responseBody,
                             transforming: { value in
                                 .json(value)

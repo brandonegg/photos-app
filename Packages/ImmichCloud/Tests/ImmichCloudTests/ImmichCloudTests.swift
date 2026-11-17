@@ -85,3 +85,18 @@ private let server = URL(string: "http://192.168.1.10:2283")!
         #expect(connection.media != other)
     }
 }
+
+@Suite struct PKCETests {
+    /// RFC 7636, appendix B.
+    @Test func matchesTheRFCExample() {
+        let pkce = PKCE(verifier: "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk")
+        #expect(pkce.challenge == "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM")
+    }
+
+    @Test func randomTokensAreURLSafeAndLongEnough() {
+        let token = PKCE.randomToken()
+        #expect(token.count == 43)
+        #expect(token.allSatisfy { $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" })
+        #expect(token != PKCE.randomToken())
+    }
+}

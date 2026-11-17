@@ -275,19 +275,60 @@ public final class AppModel {
 
     // MARK: Accounts
 
+    /// Onboarding step 1: saves the addresses, then checks that one of them answers and reads
+    /// how its server lets people sign in. Throws when neither address can be reached.
+    public func connect(to addresses: ServerAddresses) async throws -> CloudLoginOptions {
+        guard addresses.local != nil || addresses.remote != nil else {
+            throw CloudError(kind: .transport, message: "Enter a home or away address.")
+        }
+        if addresses != serverSettings.addresses {
+            serverSettings.addresses = addresses
+            versionCheckedFor = nil
+        }
+        return try await loginOptions()
+    }
+
+    /// The sign-in options of whichever configured address answers first.
+    public func loginOptions() async throws -> CloudLoginOptions {
+        let server = try await reachableServer()
+        return try await provider.loginOptions(at: server.url)
+    }
+
     /// Signs in against whichever configured address answers first.
     public func signIn(email: String, password: String) async throws {
+        let server = try await reachableServer()
+        let result = try await provider.signIn(at: server.url, email: email.trimmingCharacters(in: .whitespaces), password: password)
+        try finishSignIn(result, via: server)
+    }
+
+    /// Begins single sign-on on whichever configured address answers first. Show the request's
+    /// page in a web authentication session, then pass the redirect to `finishOAuth`.
+    public func startOAuth() async throws -> CloudOAuthRequest {
+        let server = try await reachableServer()
+        return try await provider.startOAuth(at: server.url)
+    }
+
+    public func finishOAuth(_ request: CloudOAuthRequest, callbackURL: URL) async throws {
+        let result = try await provider.finishOAuth(request, callbackURL: callbackURL)
+        let server = connection.activeServer.flatMap { $0.url == request.server ? $0 : nil }
+        try finishSignIn(result, via: server)
+    }
+
+    private func reachableServer() async throws -> ActiveServer {
         let status = await selector.resolve()
         guard let server = status.activeServer else {
-            if case .unreachable(let reasons) = status {
+            if case .unreachable(let reasons) = status, !reasons.isEmpty {
                 throw CloudError(kind: .transport, message: "Could not reach the server.\n" + reasons.joined(separator: "\n"))
             }
             throw CloudError(kind: .transport, message: "Could not reach the server.")
         }
-        let result = try await provider.signIn(at: server.url, email: email.trimmingCharacters(in: .whitespaces), password: password)
+        return server
+    }
+
+    private func finishSignIn(_ result: CloudSignIn, via server: ActiveServer?) throws {
         let account = Account(userID: result.userID, email: result.email, name: result.name, isAdmin: result.isAdmin)
         try accounts.signIn(account, token: result.token)
-        Log.networking.info("Signed in as \(result.email, privacy: .private) via \(server.route.rawValue, privacy: .public)")
+        Log.networking.info("Signed in as \(result.email, privacy: .private) via \(server?.route.rawValue ?? "server", privacy: .public)")
         openSessionForActiveAccount()
     }
 

@@ -145,6 +145,7 @@ Photos and personal details are blurred.
 - **Reliability on small boards:**
   - Make the system journal persistent (`sudo mkdir -p /var/log/journal`).
   - Enable the hardware watchdog (`RuntimeWatchdogSec=15` in `/etc/systemd/system.conf`).
+- **Single sign-on (OAuth, e.g. PocketID):** turn on OAuth in Immich (Administration › Settings › Authentication Settings). The app uses Immich's mobile redirect, `app.immich:///oauth-callback`, exactly like the official Immich app, so a server already set up for that app works as is: either allow that redirect URI at your identity provider, or turn on **Mobile Redirect URI Override** with `https://<your-server>/api/oauth/mobile-redirect`.
 - **Faces and smart search:** optional. Run Immich's machine-learning container on a stronger computer (e.g. a Mac) and point the server at it. See Immich's *Remote Machine Learning* guide.
 
 ## Installation
@@ -185,8 +186,9 @@ A free developer account (Personal Team) works. Free profiles last 7 days, so ru
 ## Usage
 
 **First launch**
-1. Sign in with your server account.
-2. Allow **Full** Photos access, so the iPhone's photos join the Library.
+1. Enter your server's home and/or away address and tap **Continue**. The app only moves on once one of them answers.
+2. Sign in the way your server allows: email and password, single sign-on (the button shows the server's own title, e.g. "Login with PocketID"), or both.
+3. Allow **Full** Photos access, so the iPhone's photos join the Library.
 
 **Back up**
 1. Open your account picture (Collections, top right) › **Back Up This iPhone** and turn it on. Optional: choose albums (**Back Up From**), mobile data, charging only.

@@ -49,6 +49,11 @@ final class LibraryUIState {
     /// The Years | Months | All accessory is put away because the minimized tab bar was
     /// expanded (tapped, like Photos); it comes back when the grid is next scrolled back in time.
     private(set) var isTimeScaleDismissed = false
+    /// Set for a moment on arriving at the newest photos: the tab bar stops minimizing, which
+    /// expands it. iOS only expands a minimized bar on a scroll the other way, so arriving
+    /// otherwise (switching Months to All) would leave it minimized with Years | Months | All gone.
+    private(set) var expandsTabBar = false
+    @ObservationIgnored private var expandTask: Task<Void, Never>?
     var timeScale = TimeScale.all
     var sort = LibrarySort.captured
     var filter = LibraryFilter.all
@@ -90,7 +95,7 @@ final class LibraryUIState {
         // Years | Months | All while browsing, back to Library | Collections at the end.
         if !isSelecting {
             if atBottom, !wasAtBottom {
-                if barMode != .tabs { barMode = .tabs }
+                if barMode != .tabs { barMode = .tabs; expandTabBar() }
                 if isTimeScaleDismissed { isTimeScaleDismissed = false }
             } else if !atBottom, barMode == .tabs, userScrolled || (wasAtBottom && interacting) {
                 barMode = .timeScale
@@ -107,6 +112,16 @@ final class LibraryUIState {
                 guard !Task.isCancelled else { return }
                 self?.isIdleLongEnough = true
             }
+        }
+    }
+
+    private func expandTabBar() {
+        expandTask?.cancel()
+        expandsTabBar = true
+        expandTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(400))
+            guard !Task.isCancelled else { return }
+            self?.expandsTabBar = false
         }
     }
 

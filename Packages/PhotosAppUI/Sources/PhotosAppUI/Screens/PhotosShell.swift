@@ -206,10 +206,12 @@ private struct TabBarBehavior: ViewModifier {
     }
 
     /// The Library starts at the newest photos at the bottom, so browsing back in time
-    /// scrolls up; elsewhere, the usual scrolling down.
+    /// scrolls up; elsewhere, the usual scrolling down. Briefly `.never` on arriving at the
+    /// newest photos, which expands a minimized bar (see `LibraryUIState.expandsTabBar`).
     @available(iOS 26.0, *)
     private var minimizeBehavior: TabBarMinimizeBehavior {
-        ui.section == .library ? .onScrollUp : .onScrollDown
+        guard ui.section == .library else { return .onScrollDown }
+        return ui.expandsTabBar ? .never : .onScrollUp
     }
 }
 

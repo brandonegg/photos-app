@@ -359,10 +359,10 @@ final class PhotoGridViewController: UIViewController {
         return collectionView.contentOffset.y >= maxOffset - max(gridLayout.itemSide, 44)
     }
 
-    private func scrollToBottom() {
+    private func scrollToBottom(animated: Bool = false) {
         let insets = collectionView.adjustedContentInset
         let maxOffset = max(-insets.top, collectionView.contentSize.height - collectionView.bounds.height + insets.bottom)
-        collectionView.setContentOffset(CGPoint(x: 0, y: maxOffset), animated: false)
+        collectionView.setContentOffset(CGPoint(x: 0, y: maxOffset), animated: animated)
     }
 
     private func scrollToTop() {
@@ -466,6 +466,12 @@ final class PhotoGridViewController: UIViewController {
     }
 
     /// Years/Months › a month: shows the first photo on or after `date` near the top.
+    /// The Library tab tapped again: back to the newest photos.
+    func scrollToNewest() {
+        guard isViewLoaded, !items.isEmpty else { return }
+        scrollToBottom(animated: true)
+    }
+
     func scroll(to date: Date) {
         guard !items.isEmpty else { return }
         let index = items.firstIndex { $0.date >= date } ?? items.count - 1
@@ -803,6 +809,15 @@ extension PhotoGridViewController: UICollectionViewDataSource, UICollectionViewD
             loadVisibleTilesIfIdle()
             reportScroll()
         }
+    }
+
+    /// A status bar tap asks to scroll to the top. Like Photos, a newest-at-the-bottom grid goes
+    /// to the newest photos instead of the oldest. (Tapping the Library tab is handled by the
+    /// tab view, which asks for `scrollToNewest()`.)
+    func scrollViewShouldScrollToTop(_ scrollView: UIScrollView) -> Bool {
+        guard !opensAtTop else { return true }
+        scrollToBottom(animated: true)
+        return false
     }
 
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {

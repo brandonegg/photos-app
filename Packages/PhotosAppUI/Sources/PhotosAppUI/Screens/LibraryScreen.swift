@@ -277,6 +277,12 @@ struct PhotoGridView: UIViewControllerRepresentable {
                 controller.presentShare(selection: selection)
             }
         }
+        if ui.scrollToNewestRequested {
+            DispatchQueue.main.async {
+                controller.scrollToNewest()
+                ui.scrollToNewestRequested = false
+            }
+        }
         if let target = ui.scrollTarget {
             DispatchQueue.main.async {
                 controller.scroll(to: target)

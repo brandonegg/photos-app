@@ -38,6 +38,7 @@ that it can run side by side with the official Immich app without uploading anyt
 | D12 | **Offline:** grid thumbnails are never evicted once loaded (the cache limit applies to previews); Download All Thumbnails fills in the rest on Wi-Fi at the lowest request priority. Keep Offline stores chosen originals in Application Support (never purged by iOS, excluded from device backups). | The whole Library stays browsable without a connection, and chosen photos open at full quality. |
 
 | D13 | **Spatial Scene is a depth map plus a ray-marched view, all on the iPhone.** Depth Anything V2 Small (Core ML, Apache-2.0, bundled; `Scripts/fetch-depth-model.sh` downloads it at a pinned revision with checksums) estimates depth. Core Image sharpens the map along the photo's edges and builds a background layer (nearer things cut out, gaps filled from around them). A Metal fragment shader walks each pixel's ray from near to far through the depth map; where the shifted view opens a gap behind something, it shows the background layer. | The public iOS SDK has no spatial-scene API (it is marked unavailable on iOS), and the research models that produce full 3D scenes have non-commercial licences and are heavy for a phone. A depth map with a small viewpoint shift gives the same kind of effect in a few hundred milliseconds, with a licence that allows shipping it. Straight on, the frame equals the photo, so switching it on and off is seamless. |
+| D13a | **When the SHARP model is in the build, Spatial Scene is a 3D Gaussian-splat scene, like the system Photos app's.** Apple's SHARP (apple/ml-sharp) turns the photo into about 1.2 million Gaussians on the iPhone (Core ML, float16, 1536×1536 input, GPU). They are unprojected to metres with the photo's focal length (30 mm equivalent when unknown), sorted farthest first once, and drawn each frame by a Metal splatting renderer (a compute pass projects each 3D covariance to a screen ellipse; instanced quads blend in linear light). Tilting moves a real 3D camera that slides across and keeps aiming at the near tenth of the scene, as SHARP's own camera does. `Scripts/build-sharp-model.sh` converts the checkpoint; without the model the depth-map renderer (D13) is used. | The private frameworks behind Photos' spatial scenes (`PhotosSpatialMediaCore`, RealityKit's `Spatial3DImage`) render Gaussian splats too, and RealityKit's `Spatial3DImage` is visionOS-only. SHARP is the closest public model. Its weights are under Apple's research-only model licence, so this path is for evaluation; it is not for release as is. |
 
 ## 3. Architecture
 
@@ -136,8 +137,8 @@ Local Swift packages, all in Swift 6 language mode (strict concurrency), assembl
   `-VerifyChecksums`, `-BackupSelfTest`, `-ConnectivitySelfTest`, `-LaunchTiming`, `-ScrollSelfTest`,
   `-ScreensSelfTest`, `-EditorSelfTest`, `-EditorFilesSelfTest`, `-OfflineSelfTest`.
   `-EditorSaveSelfTest` and `-EditorRevertSelfTest` change the newest photo (iOS asks first).
-  `-SpatialSelfTest` opens the newest photo, times the depth model, saves the layers and frames from
-  several viewpoints, then drives the real button.
+  `-SpatialSelfTest` opens the newest photo, times the scene model (SHARP when built in, else the depth
+  model), saves frames from several viewpoints, then drives the real button.
   `-VideoEditSelfTest` works on a duplicate of a video (`-VideoEditTarget NAME`): every editor tool,
   with the preview player's frames compared against the edit rendered from the source, the files a
   save writes, one real save, then the duplicate is deleted (iOS asks). `-VideoEditPreviewOnly` checks

@@ -1,4 +1,5 @@
 import CoreGraphics
+import os
 import ImageIO
 import Photos
 import UIKit
@@ -45,11 +46,11 @@ enum SpatialSelfTest {
         try? await Task.sleep(for: .seconds(3))
         say("SHOT portrait-on")
         try? await Task.sleep(for: .seconds(4))
-        let before = page.zoomView.imageView.image.flatMap(SpatialSceneFactory.upright)
+        let before = page.zoomView.imageView.image.flatMap { SpatialSceneFactory.upright($0) }
         badge.set(off: true)
         page.setPortraitOff(true)
         try? await Task.sleep(for: .seconds(4))
-        let after = page.zoomView.imageView.image.flatMap(SpatialSceneFactory.upright)
+        let after = page.zoomView.imageView.image.flatMap { SpatialSceneFactory.upright($0) }
         if let before, let after { say(String(format: "portrait off differs from on by %.4f (blur removed shows as > 0)", difference(before, after))) }
         say("SHOT portrait-off")
         try? await Task.sleep(for: .seconds(4))
@@ -64,8 +65,8 @@ enum SpatialSelfTest {
 
     static func run(viewer: ViewerViewController) async {
         if isPortraitTest { return await runPortrait(viewer: viewer) }
-        say("model in this build: \(DepthEstimator.isAvailable)")
-        guard DepthEstimator.isAvailable else { return say("done") }
+        say("model in this build: depth \(DepthEstimator.isAvailable), SHARP \(GaussianPredictor.isAvailable)")
+        guard DepthEstimator.isAvailable || GaussianPredictor.isAvailable else { return say("done") }
         var waited = 0
         // Wait for the full preview, not the small placeholder.
         while (viewer.spatialTestPage?.zoomView.imageView.image).map({ $0.size.width * $0.scale < 600 }) ?? true, waited < 150 {
@@ -78,7 +79,55 @@ enum SpatialSelfTest {
         say("SHOT off")
         try? await Task.sleep(for: .seconds(5))
 
-        // The pipeline on its own, timed.
+        if GaussianPredictor.isAvailable {
+            await runSharp(image: image)
+        } else {
+            await runDepth(image: image)
+        }
+        await runButton(viewer: viewer, page: page)
+    }
+
+    /// SHARP on its own, timed, with frames from several viewpoints.
+    private static func runSharp(image: UIImage) async {
+        do {
+            let memoryBefore = os_proc_available_memory()
+            var started = Date()
+            let cloud = try await SpatialSceneFactory.cloud(for: image)
+            let total = Date().timeIntervalSince(started)
+            let load = await GaussianPredictor.shared.loadSeconds, predict = await GaussianPredictor.shared.predictSeconds, build = await GaussianPredictor.shared.buildSeconds
+            say(String(format: "sharp: first scene %.2f s (model load %.2f s, predict %.2f s, splats %.2f s), %d splats, near %.2f m, focus %.2f m, %.0f MB, memory left %.0f → %.0f MB",
+                       total, load, predict, build, cloud.count, cloud.nearDepth, cloud.focusDepth, Double(cloud.memoryBytes) / 1_048_576,
+                       Double(memoryBefore) / 1_048_576, Double(os_proc_available_memory()) / 1_048_576))
+            started = Date()
+            _ = try await SpatialSceneFactory.cloud(for: image)
+            say(String(format: "sharp: next scene %.2f s (predict %.2f s)", Date().timeIntervalSince(started), await GaussianPredictor.shared.predictSeconds))
+            guard let renderer = SplatRenderer.shared, let buffers = renderer.buffers(for: cloud),
+                  let upright = SpatialSceneFactory.upright(image, longestSide: CGFloat(GaussianPredictor.inputSide)) else { throw SpatialError.renderFailed }
+            let width = cloud.imageWidth, height = cloud.imageHeight
+            if let flat = renderer.image(buffers, look: .zero, zoom: 1, width: width, height: height) {
+                save(flat, name: "sharp-straight")
+                save(upright, name: "sharp-photo")
+                say(String(format: "straight on at zoom 1 differs from the photo by %.4f (0 = identical)", difference(flat, upright)))
+            }
+            let zoom = SplatRenderer.edgeZoom(for: cloud)
+            var frames: [String: CGImage] = [:]
+            for (name, look) in [("centre", SIMD2<Float>(0, 0)), ("left", SIMD2<Float>(-1, 0)), ("right", SIMD2<Float>(1, 0)), ("up", SIMD2<Float>(0, -1)), ("down", SIMD2<Float>(0, 1))] {
+                started = Date()
+                guard let frame = renderer.image(buffers, look: look, zoom: zoom, width: width, height: height) else { continue }
+                frames[name] = frame
+                save(frame, name: "sharp-\(name)")
+                say(String(format: "view %@: drawn in %.0f ms", name, Date().timeIntervalSince(started) * 1000))
+            }
+            if let left = frames["left"], let right = frames["right"], let up = frames["up"], let down = frames["down"] {
+                say(String(format: "left vs right differ by %.4f, up vs down %.4f (parallax shows as > 0), zoom %.3f", difference(left, right), difference(up, down), zoom))
+            }
+        } catch {
+            say("sharp pipeline failed: \(error)")
+        }
+    }
+
+    /// The depth-map pipeline on its own, timed.
+    private static func runDepth(image: UIImage) async {
         do {
             guard let upright = SpatialSceneFactory.upright(image) else { throw SpatialError.noImage }
             var started = Date()
@@ -113,6 +162,9 @@ enum SpatialSelfTest {
         } catch {
             say("pipeline failed: \(error)")
         }
+    }
+
+    private static func runButton(viewer: ViewerViewController, page: ViewerPageCell) async {
         // The label shown while a scene is made (it normally passes in a fraction of a second).
         viewer.spatialTestBadge.set(.generating, animated: false)
         viewer.view.layoutIfNeeded()
@@ -122,14 +174,17 @@ enum SpatialSelfTest {
         viewer.spatialTestBadge.set(.off, animated: false)
         // Start the button from cold, as a first use would.
         await DepthEstimator.shared.unload()
+        await GaussianPredictor.shared.unload()
+        GaussianCloudCache.removeAll()
+        SpatialSceneCache.removeAll()
+        var waited = 0
 
         // The real button.
         viewer.spatialTestTap()
         say("tapped: badge \(viewer.spatialTestBadge.mode)")
         try? await Task.sleep(for: .milliseconds(450))
         say("SHOT generating")
-        waited = 0
-        while viewer.spatialTestBadge.mode != .on, waited < 300 {
+        while viewer.spatialTestBadge.mode != .on, waited < 1200 {
             try? await Task.sleep(for: .milliseconds(100))
             waited += 1
         }

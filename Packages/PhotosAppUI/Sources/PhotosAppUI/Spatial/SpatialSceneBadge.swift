@@ -203,10 +203,10 @@ enum SpatialSceneFactory {
 
     /// An upright, standard-range copy of the image, no bigger than the scene needs (Display P3).
     @MainActor
-    static func upright(_ image: UIImage) -> CGImage? {
+    static func upright(_ image: UIImage, longestSide: CGFloat = SpatialSceneBuilder.colorSide) -> CGImage? {
         let longest = max(image.size.width * image.scale, image.size.height * image.scale)
         guard longest > 0 else { return nil }
-        let scale = min(1, SpatialSceneBuilder.colorSide / longest)
+        let scale = min(1, longestSide / longest)
         let width = Int((image.size.width * image.scale * scale).rounded()), height = Int((image.size.height * image.scale * scale).rounded())
         guard width > 1, height > 1, let space = CGColorSpace(name: CGColorSpace.displayP3),
               let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0, space: space,
@@ -224,6 +224,18 @@ enum SpatialSceneFactory {
     static func scene(for image: UIImage) async throws -> SpatialScene {
         guard let upright = upright(image) else { throw SpatialError.noImage }
         return try await build(ImageBox(image: upright))
+    }
+
+    /// The SHARP scene (3D Gaussians) for a photo.
+    @MainActor
+    static func cloud(for image: UIImage) async throws -> GaussianCloud {
+        guard let upright = upright(image, longestSide: CGFloat(GaussianPredictor.inputSide)) else { throw SpatialError.noImage }
+        return try await buildCloud(ImageBox(image: upright))
+    }
+
+    @concurrent
+    private static func buildCloud(_ box: ImageBox) async throws -> GaussianCloud {
+        try await GaussianPredictor.shared.cloud(for: box.image)
     }
 
     @concurrent

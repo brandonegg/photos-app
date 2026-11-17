@@ -212,6 +212,8 @@ A free developer account (Personal Team) works. Free profiles last 7 days, so ru
 
 **Spatial Scene:** open a photo › tap the small hexagon button under ···, then tilt the iPhone. Tap it again to turn it off. It stays on as you swipe to other photos.
 
+**Spatial Scene with SHARP (evaluation):** `Scripts/build-sharp-model.sh` converts Apple's [SHARP](https://github.com/apple/ml-sharp) model (needs `uv`, about 10 GB free, 2.8 GB download) into `App/Models`; the next build then makes real 3D scenes of Gaussian splats, like the system Photos app. The model adds about 1.2 GB to the app, and its licence allows research use only.
+
 **Portrait:** on a Portrait photo that's on the iPhone, tap PORTRAIT above the photo › Portrait Off to see it without the background blur.
 
 **On a TV:** turn on Screen Mirroring (or AirPlay) in Control Centre, then open a photo or video.

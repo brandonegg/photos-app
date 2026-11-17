@@ -368,11 +368,11 @@ final class ViewerPageCell: UICollectionViewCell {
 
     // MARK: Spatial scene
 
-    private var spatialView: SpatialSceneView?
+    private var spatialView: (any SpatialSceneDisplay)?
     private var shimmer: SpatialShimmerView?
 
     /// The scene on screen, if the spatial view is showing.
-    var spatialSceneView: SpatialSceneView? { spatialView }
+    var spatialSceneView: (any SpatialSceneDisplay)? { spatialView }
 
     /// Works out the photo's depth (a shimmer plays meanwhile) and shows it as a scene that
     /// shifts as the iPhone tilts. Throws if the photo can't be used; cancelling leaves it as it was.
@@ -397,16 +397,33 @@ final class ViewerPageCell: UICollectionViewCell {
             }
             guard let image = zoomView.imageView.image else { throw SpatialError.noImage }
             let key = "\(item.id)|\(Int(image.size.width * image.scale))"
-            let scene: SpatialScene
-            if let cached = SpatialSceneCache.scene(for: key) {
-                scene = cached
+            let view: any SpatialSceneDisplay
+            if GaussianPredictor.isAvailable {
+                // SHARP: a real 3D scene, like the system Photos app's.
+                let cloud: GaussianCloud
+                if let cached = GaussianCloudCache.cloud(for: key) {
+                    cloud = cached
+                } else {
+                    cloud = try await SpatialSceneFactory.cloud(for: image)
+                    GaussianCloudCache.store(cloud, for: key)
+                }
+                try Task.checkCancellation()
+                guard self.item?.id == item.id, self.shimmer === shimmer else { throw CancellationError() }
+                guard let splats = SplatSceneView(cloud: cloud) else { throw SpatialError.renderFailed }
+                view = splats
             } else {
-                scene = try await SpatialSceneFactory.scene(for: image)
-                SpatialSceneCache.store(scene, for: key)
+                let scene: SpatialScene
+                if let cached = SpatialSceneCache.scene(for: key) {
+                    scene = cached
+                } else {
+                    scene = try await SpatialSceneFactory.scene(for: image)
+                    SpatialSceneCache.store(scene, for: key)
+                }
+                try Task.checkCancellation()
+                guard self.item?.id == item.id, self.shimmer === shimmer else { throw CancellationError() }
+                guard let depth = SpatialSceneView(scene: scene) else { throw SpatialError.renderFailed }
+                view = depth
             }
-            try Task.checkCancellation()
-            guard self.item?.id == item.id, self.shimmer === shimmer else { throw CancellationError() }
-            guard let view = SpatialSceneView(scene: scene) else { throw SpatialError.renderFailed }
             view.frame = zoomView.imageView.bounds
             view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
             view.alpha = 0

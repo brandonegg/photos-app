@@ -21,6 +21,10 @@ final class PhotoGridViewController: UIViewController {
     static let previewThresholdPixels: CGFloat = 330
 
     var onColumnsChanged: ((Int) -> Void)?
+    /// Opens at the first item and stays there, instead of the Library's newest-at-the-bottom
+    /// (Search: results are ranked, best first, and read top to bottom like Photos). A new set of
+    /// results (a different first item) goes back to the top; items added after keep the view in place.
+    var opensAtTop = false
     /// Scrolling reports for the Library header and bar: visible dates, whether the
     /// user is touching or moving the grid, whether it's at the newest photos, and
     /// whether the user scrolled (which morphs the bottom bar).
@@ -198,7 +202,7 @@ final class PhotoGridViewController: UIViewController {
         collectionView.verticalScrollIndicatorInsets = collectionView.contentInset
         scrubberTop?.constant = contentInsets.top + 4
         scrubberBottom?.constant = -contentInsets.bottom - 4
-        if wasAtBottom, didInitialScroll { scrollToBottom() }
+        if wasAtBottom, didInitialScroll, !opensAtTop { scrollToBottom() }
     }
 
     /// Select mode › Share: opens the share screen at the first selected item, which
@@ -270,7 +274,7 @@ final class PhotoGridViewController: UIViewController {
             collectionView.layoutIfNeeded()
             if collectionView.contentSize.height > 0 {
                 didInitialScroll = true
-                scrollToBottom()
+                opensAtTop ? scrollToTop() : scrollToBottom()
                 if onScrollInfo != nil {
                     LaunchTiming.firstGridShown(items: items.count)
                     LaunchTiming.checkPosition { [weak self] in self?.isNearBottom ?? false }
@@ -313,6 +317,7 @@ final class PhotoGridViewController: UIViewController {
             return
         }
         let wasAtBottom = isNearBottom
+        let isNewResultSet = items.first?.id != newItems.first?.id
         let anchor = items.isEmpty ? nil : captureAnchor()
         if !didInitialScroll, onScrollInfo != nil { LaunchTiming.mark("apply") }
         items = newItems
@@ -321,7 +326,14 @@ final class PhotoGridViewController: UIViewController {
         collectionView.layoutIfNeeded()
         if !didInitialScroll, onScrollInfo != nil { LaunchTiming.mark("laidOut") }
 
-        if !didInitialScroll || wasAtBottom {
+        if opensAtTop {
+            if !items.isEmpty, collectionView.bounds.height > 0, !didInitialScroll || isNewResultSet {
+                didInitialScroll = true
+                scrollToTop()
+            } else {
+                restore(anchor)
+            }
+        } else if !didInitialScroll || wasAtBottom {
             if !items.isEmpty, collectionView.bounds.height > 0 {
                 didInitialScroll = true
                 scrollToBottom()
@@ -348,6 +360,10 @@ final class PhotoGridViewController: UIViewController {
         let insets = collectionView.adjustedContentInset
         let maxOffset = max(-insets.top, collectionView.contentSize.height - collectionView.bounds.height + insets.bottom)
         collectionView.setContentOffset(CGPoint(x: 0, y: maxOffset), animated: false)
+    }
+
+    private func scrollToTop() {
+        collectionView.setContentOffset(CGPoint(x: 0, y: -collectionView.adjustedContentInset.top), animated: false)
     }
 
     private struct Anchor {

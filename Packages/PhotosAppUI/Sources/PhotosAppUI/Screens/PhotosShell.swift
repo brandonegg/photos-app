@@ -185,7 +185,7 @@ private struct TabBarBehavior: ViewModifier {
     }
 
     private var showsAccessory: Bool {
-        ui.section == .library && ui.barMode == .timeScale && !ui.isSelecting
+        ui.section == .library && ui.barMode == .timeScale && !ui.isSelecting && !ui.isTimeScaleDismissed
     }
 
     func body(content: Content) -> some View {
@@ -206,14 +206,18 @@ private struct TabBarBehavior: ViewModifier {
     }
 
     /// The Library starts at the newest photos at the bottom, so browsing back in time
-    /// scrolls up; elsewhere, the usual scrolling down.
+    /// scrolls up; elsewhere, the usual scrolling down. Briefly `.never` on arriving at the
+    /// newest photos, which expands a minimized bar (see `LibraryUIState.expandsTabBar`).
     @available(iOS 26.0, *)
     private var minimizeBehavior: TabBarMinimizeBehavior {
-        ui.section == .library ? .onScrollUp : .onScrollDown
+        guard ui.section == .library else { return .onScrollDown }
+        return ui.expandsTabBar ? .never : .onScrollUp
     }
 }
 
 /// The bottom accessory: Years | Months | All, a little narrower beside the minimized tab bar.
+/// Tapping the minimized tab bar expands it to Library | Collections alone, as in Photos: the
+/// accessory steps aside until the grid is scrolled back again.
 @available(iOS 26.0, *)
 private struct TimeScaleAccessory: View {
     @Bindable var ui: LibraryUIState
@@ -221,6 +225,9 @@ private struct TimeScaleAccessory: View {
 
     var body: some View {
         TimeScalePicker(ui: ui)
-            .padding(.horizontal, placement == .inline ? 6 : 12)
+            .padding(.horizontal, placement == .inline ? 0 : 4)
+            .onChange(of: placement) { old, new in
+                if old == .inline, new == .expanded { ui.tabBarExpanded() }
+            }
     }
 }
